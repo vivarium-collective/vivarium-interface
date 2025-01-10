@@ -1,0 +1,12 @@
+.python-version
+__pycache__/
+.idea/
+*.ipynb_checkpoints/
+dist/
+.DS_Store
+.empty
+build/
+.venv/
+
+process_bigraph.egg-info/
+out/
