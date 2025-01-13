@@ -66,8 +66,7 @@ class Vivarium:
                 self.core.register_types(package.get("types", {}))
 
         # make the composite
-        self.composite = None
-        self.generate()
+        self.composite = self.generate()
 
 
     def __repr__(self):
@@ -77,48 +76,55 @@ class Vivarium:
     def add_process(self,
                     name,
                     process_id,
-                    edge_type=None,
                     config=None,
                     inputs=None,
                     outputs=None,
                     path=None
                     ):
-        edge_type = edge_type or "process"
         config = config or {}
+        inputs = inputs or {}
+        outputs = outputs or {}
         path = path or ()
 
         # make the process spec
         state = {
             name: {
-                "_type": edge_type,
+                "_type": "edge",
                 "address": f"local:{process_id}",  # TODO -- only support local right now?
                 "config": config,
-                "inputs": {} if inputs is None else inputs,
-                "outputs": {} if outputs is None else outputs,
+                "inputs": inputs,
+                "outputs": outputs,
+                "_inputs": {},
+                "_outputs": {},
             }
         }
 
         # nest the process in the composite at the given path
-        nested_state = set_path(self.document["state"], path, state)
+        nested_state = set_path({}, path, state)
 
         # update the document
         self.document["state"] = deep_merge(self.document["state"], nested_state)
 
         # remake the composite
-        self.generate()
+        self.composite = self.generate()
 
 
     def generate(self):
-        self.composite = Composite(
+        composite = Composite(
             self.document,
             core=self.core)
-        self.make_document(schema=True)
+        return composite
 
 
-    def merge(self):
-        self.composite.merge(schema={},  # self.document.get("composition",{}),
-                             state=self.document.get("state",{}))
-        self.make_document(schema=True)
+    def fill(self):
+        self.composite.initialize(config=self.document)
+        self.make_document()
+
+    # def merge(self):
+    #     self.composite.merge(schema={},  # self.document.get("composition",{}),
+    #                          state=self.document.get("state",{}))
+    #     self.make_document(schema=True)
+    #     return self.composite
 
 
     def register_processes(self, processes):
@@ -148,7 +154,7 @@ class Vivarium:
 
 
     def make_document(self, schema=False):
-        document = {
+        self.document = {
             "state": self.core.serialize(
                 self.composite.composition,
                 self.composite.state)}
@@ -156,10 +162,8 @@ class Vivarium:
         # TODO -- fix recursion error
         # if schema:
         #     serialized_schema = self.core.representation(
-        #         self.composite.composition)
+        #         composite.composition)
         #     document["composition"] = serialized_schema
-
-        self.document = document
 
         return self.document
 
@@ -198,11 +202,6 @@ class Vivarium:
 
 
     def read_emitter_config(self, emitter_config):
-
-        # upcoming deprecation warning
-        print("Warning: read_emitter_config() is deprecated and will be removed in a future version. "
-              "Use use Vivarium for managing simulations and emitters instead of Composite.")
-
         address = emitter_config.get("address", "local:ram-emitter")
         config = emitter_config.get("config", {})
         mode = emitter_config.get("mode", "none")
@@ -286,7 +285,7 @@ class Vivarium:
         return timeseries
 
 
-    def save_graph(self, filename="graph", out_dir="out", **kwargs):
+    def diagram(self, filename="diagram", out_dir="out", **kwargs):
         kwargs["dpi"] = kwargs.get("dpi", "140")
         graph = plot_bigraph(
             state=self.composite.state,
@@ -347,7 +346,7 @@ def test_vivarium():
 
     sim.save("test_vivarium.json")
 
-    sim.save_graph(filename="test_vivarium", out_dir="out")
+    sim.diagram(filename="test_vivarium", out_dir="out")
 
 
 if __name__ == "__main__":

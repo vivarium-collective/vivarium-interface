@@ -40,7 +40,7 @@ def test_interface():
 
     print('A STATE:')
     print(v)
-    v.save_graph(filename='A_STATE')
+    v.diagram(filename='A_STATE')
 
     # add a process
     v.add_process(name='increase',
@@ -53,15 +53,15 @@ def test_interface():
 
     print('B STATE:')
     print(v)
-    v.save_graph(filename='B_STATE')
+    v.diagram(filename='B_STATE')
 
     # generate to fill in graph
-    v.merge()
+    v.fill()
     # v.generate()
 
     print('C STATE:')
     print(v)
-    v.save_graph(filename='C_STATE')
+    v.diagram(filename='C_STATE')
 
     x=0
 
