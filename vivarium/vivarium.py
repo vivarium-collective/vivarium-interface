@@ -4,7 +4,7 @@ Vivarium is a simulation environment that runs composites in the process bigraph
 import os
 import json
 
-from process_bigraph import ProcessTypes, Composite
+from process_bigraph import ProcessTypes, Composite, pf
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path
@@ -34,22 +34,25 @@ class Vivarium:
         processes = processes or {}
         emitter_config = emitter_config or {"mode": "all"}
 
-        self.document = document
+        self.document = document or {"state": {}}
 
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
 
         # register processes
-        self.core.register_processes(processes)
+        if processes:
+            self.core.register_processes(processes)
 
         # register types
-        self.core.register_types(types)
+        if types:
+            self.core.register_types(types)
 
         # TODO register other packages
-        self.require = document.pop('require', [])
-        for require in self.require:
-            package = self.find_package(require)
-            self.core.register_types(package.get('types', {}))
+        if 'require' in self.document:
+            self.require = document['require']
+            for require in self.require:
+                package = self.find_package(require)
+                self.core.register_types(package.get('types', {}))
 
         # TODO make this call self.add_emitter instead of using Composite's method
         if 'emitter' not in self.document:
@@ -60,6 +63,10 @@ class Vivarium:
         self.composite = Composite(
             self.document,
             core=self.core)
+
+
+    def __repr__(self):
+        return f"Vivarium({pf(self.composite.state)})"
 
 
     def read_emitter_config(self, emitter_config):
