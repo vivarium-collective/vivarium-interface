@@ -76,22 +76,26 @@ class Vivarium:
 
     def add_process(self,
                     name,
-                    edge_type,
+                    process_id,
+                    edge_type=None,
                     config=None,
                     inputs=None,
                     outputs=None,
                     path=None
                     ):
+        edge_type = edge_type or 'process'
         config = config or {}
         path = path or ()
 
         # make the process spec
         state = {
-            '_type': edge_type,
-            'address': f'local:{name}',  # TODO -- only support local right now?
-            'config': config,
-            'inputs': {} if inputs is None else inputs,
-            'outputs': {} if outputs is None else outputs,
+            name: {
+                '_type': edge_type,
+                'address': f'local:{process_id}',  # TODO -- only support local right now?
+                'config': config,
+                'inputs': {} if inputs is None else inputs,
+                'outputs': {} if outputs is None else outputs,
+            }
         }
 
         # nest the process in the composite at the given path
@@ -277,6 +281,7 @@ class Vivarium:
 
 
     def save_graph(self, filename='graph', out_dir='out', **kwargs):
+        kwargs['dpi'] = kwargs.get('dpi', '140')
         graph = plot_bigraph(
             state=self.composite.state,
             schema=self.composite.composition,
