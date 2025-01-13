@@ -1,3 +1,5 @@
+from fileinput import filename
+
 from process_bigraph import Process
 from process_bigraph.processes import TOY_PROCESSES
 
@@ -30,9 +32,37 @@ TOY_PROCESSES = {
 
 def test_interface():
     v = Vivarium(processes=TOY_PROCESSES)
+    print('TYPES:')
+    v.print_types()
+    print('PROCESSES:')
+    v.print_processes()
 
 
+    print('A STATE:')
+    print(v)
+    v.save_graph(filename='A_STATE')
 
+    # add a process
+    v.add_process(name='increase',
+                  process_id='increase',
+                  config={'rate': 1},
+                  # inputs=None,
+                  # outputs=None,
+                  # path=None
+                  )
+
+    print('B STATE:')
+    print(v)
+    v.save_graph(filename='B_STATE')
+
+    # generate to fill in graph
+    v.merge()
+
+    print('C STATE:')
+    print(v)
+    v.save_graph(filename='C_STATE')
+
+    x=0
 
 
 

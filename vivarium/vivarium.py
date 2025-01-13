@@ -115,6 +115,12 @@ class Vivarium:
         self.make_document(schema=True)
 
 
+    def merge(self):
+        if self.composite:
+            self.composite.merge({}, self.document)
+        self.make_document(schema=True)
+
+
     def register_processes(self, processes):
         if processes is None:
             pass
