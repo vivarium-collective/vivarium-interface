@@ -4,10 +4,12 @@ Vivarium is a simulation environment that runs composites in the process bigraph
 import os
 import json
 
+from IPython.display import display, Image
+from process_bigraph.emitter import deep_merge
 from process_bigraph import ProcessTypes, Composite, pf
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
-from bigraph_schema import is_schema_key, set_path
+from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_viz import plot_bigraph
 
 
@@ -28,6 +30,7 @@ class Vivarium:
         composite (Composite): The composite object managing the simulation.
         require (list): List of required packages for the simulation.
     """
+
     def __init__(self,
                  document=None,
                  processes=None,
@@ -41,13 +44,13 @@ class Vivarium:
         types = types or {}
         emitter = emitter or "all"
 
-        self.document = document or {"state": {}}
-
-        # TODO make this call self.add_emitter instead of using Composite's method
-        self.document['emitter'] = {"mode": emitter}
-
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
+
+        # set the document
+        self.document = document or {"state": {}}
+        # TODO make this call self.add_emitter instead of using Composite's method
+        self.document['emitter'] = {"mode": emitter}
 
         # register processes
         self.register_processes(processes)
@@ -71,10 +74,41 @@ class Vivarium:
         return f"Vivarium({pf(self.composite.state)})"
 
 
+    def add_process(self,
+                    name,
+                    edge_type,
+                    config=None,
+                    inputs=None,
+                    outputs=None,
+                    path=None
+                    ):
+        config = config or {}
+        path = path or ()
+
+        # make the process spec
+        state = {
+            '_type': edge_type,
+            'address': f'local:{name}',  # TODO -- only support local right now?
+            'config': config,
+            'inputs': {} if inputs is None else inputs,
+            'outputs': {} if outputs is None else outputs,
+        }
+
+        # nest the process in the composite at the given path
+        nested_state = set_path(self.document['state'], path, state)
+
+        # update the document
+        self.document['state'] = deep_merge(self.document['state'], nested_state)
+
+        # remake the composite
+        self.generate()
+
+
     def generate(self):
         self.composite = Composite(
             self.document,
             core=self.core)
+        self.make_document(schema=True)
 
 
     def register_processes(self, processes):
@@ -103,18 +137,21 @@ class Vivarium:
         print(self.core.list())
 
 
-    def get_document(self, schema=False):
+    def make_document(self, schema=False):
         document = {
             'state': self.core.serialize(
                 self.composite.composition,
                 self.composite.state)}
 
-        if schema:
-            serialized_schema = self.core.representation(
-                self.composite.composition)
-            document['composition'] = serialized_schema
+        # TODO -- fix recursion error
+        # if schema:
+        #     serialized_schema = self.core.representation(
+        #         self.composite.composition)
+        #     document['composition'] = serialized_schema
 
-        return document
+        self.document = document
+
+        return self.document
 
 
     def save(self,
@@ -125,7 +162,7 @@ class Vivarium:
         # TODO: add in dependent packages and version
         # TODO: add in dependent types
 
-        document = self.get_document(schema=schema)
+        document = self.make_document(schema=schema)
 
         # save the dictionary to JSON
         if not os.path.exists(outdir):
@@ -239,14 +276,20 @@ class Vivarium:
         return timeseries
 
 
-    def visualize(self, filename=None, out_dir=None, **kwargs):
-        return plot_bigraph(
+    def save_graph(self, filename='graph', out_dir='out', **kwargs):
+        graph = plot_bigraph(
             state=self.composite.state,
             schema=self.composite.composition,
             core=self.core,
-            out_dir=out_dir,
-            filename=filename,
+            # out_dir=out_dir,
+            # filename=filename,
             **kwargs)
+
+        # save and display the graph
+        os.makedirs(out_dir, exist_ok=True)
+        output_path = os.path.join(out_dir, filename)
+        graph.render(output_path, format='png', cleanup=True)
+        display(Image(filename=f'{output_path}.png'))
 
 
 def example_package():
@@ -292,6 +335,8 @@ def test_vivarium():
     print(results)
 
     sim.save('test_vivarium.json')
+
+    sim.save_graph(filename='test_vivarium', out_dir='out')
 
 
 if __name__ == '__main__':
