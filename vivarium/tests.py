@@ -1,4 +1,6 @@
 from process_bigraph import Process
+from process_bigraph.processes import TOY_PROCESSES
+
 from vivarium import Vivarium
 
 
@@ -21,8 +23,13 @@ class IncreaseProcess(Process):
             'level': state['level'] * self.config['rate']}
 
 
+TOY_PROCESSES = {
+    'increase': IncreaseProcess
+}
+
+
 def test_interface():
-    v = Vivarium()
+    v = Vivarium(processes=TOY_PROCESSES)
 
 
 

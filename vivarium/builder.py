@@ -275,11 +275,11 @@ class Builder:
     def update(self, state):
         self.node.update(state)
 
-    def list_types(self):
-        return self.core.type_registry.list()
-
-    def list_processes(self):
-        return self.core.process_registry.list()
+    # def list_types(self):
+    #     return self.core.type_registry.list()
+    #
+    # def list_processes(self):
+    #     return self.core.process_registry.list()
 
     def complete(self):
         self.schema, self.tree = self.core.complete(self.schema, self.tree)

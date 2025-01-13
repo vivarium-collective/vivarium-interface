@@ -11,6 +11,10 @@ from bigraph_schema import is_schema_key, set_path
 from bigraph_viz import plot_bigraph
 
 
+# class BuilderNode:
+
+
+
 
 class Vivarium:
     """
@@ -60,13 +64,25 @@ class Vivarium:
                 self.core.register_types(package.get('types', {}))
 
         # make the composite
+        self.complete()
+
+
+    def __repr__(self):
+        return f"Vivarium({pf(self.composite.state)})"
+
+
+    def complete(self):
         self.composite = Composite(
             self.document,
             core=self.core)
 
 
-    def __repr__(self):
-        return f"Vivarium({pf(self.composite.state)})"
+    def print_types(self):
+        print(self.core.list())
+
+
+    def print_processes(self):
+        print(self.core.process_registry.list())
 
 
     def read_emitter_config(self, emitter_config):
