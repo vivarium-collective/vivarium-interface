@@ -36,6 +36,7 @@ class Vivarium:
                  require=None,
                  emitter=None,
                  ):
+
         processes = processes or {}
         types = types or {}
         emitter = emitter or "all"
@@ -49,12 +50,10 @@ class Vivarium:
         self.core = core or ProcessTypes()
 
         # register processes
-        if processes:
-            self.core.register_processes(processes)
+        self.register_processes(processes)
 
         # register types
-        if types:
-            self.core.register_types(types)
+        self.register_types(types)
 
         # TODO register other packages
         if require:
@@ -64,25 +63,91 @@ class Vivarium:
                 self.core.register_types(package.get('types', {}))
 
         # make the composite
-        self.complete()
+        self.composite = None
+        self.generate()
 
 
     def __repr__(self):
         return f"Vivarium({pf(self.composite.state)})"
 
 
-    def complete(self):
+    def generate(self):
         self.composite = Composite(
             self.document,
             core=self.core)
+
+
+    def register_processes(self, processes):
+        if processes is None:
+            pass
+        elif isinstance(processes, dict):
+            self.core.register_processes(processes)
+        else:
+            print("Warning: register_processes() should be called with a dictionary of processes.")
+
+
+    def register_types(self, types):
+        if types is None:
+            pass
+        elif isinstance(types, dict):
+            self.core.register_types(types)
+        else:
+            print("Warning: register_types() should be called with a dictionary of types.")
+
+
+    def print_processes(self):
+        print(self.core.process_registry.list())
 
 
     def print_types(self):
         print(self.core.list())
 
 
-    def print_processes(self):
-        print(self.core.process_registry.list())
+    def get_document(self, schema=False):
+        document = {
+            'state': self.core.serialize(
+                self.composite.composition,
+                self.composite.state)}
+
+        if schema:
+            serialized_schema = self.core.representation(
+                self.composite.composition)
+            document['composition'] = serialized_schema
+
+        return document
+
+
+    def save(self,
+             filename='simulation.json',
+             outdir='out',
+             schema=True,
+             ):
+        # TODO: add in dependent packages and version
+        # TODO: add in dependent types
+
+        document = self.get_document(schema=schema)
+
+        # save the dictionary to JSON
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        filename = os.path.join(outdir, filename)
+
+        # write the new data to the file
+        with open(filename, 'w') as json_file:
+            json.dump(document, json_file, indent=4)
+            print(f"Created new file: {filename}")
+
+
+    def find_package(self, package):
+        pass
+
+
+    def run(self, interval):
+        self.composite.run(interval)
+
+
+    def step(self):
+        self.composite.update({}, 0)
 
 
     def read_emitter_config(self, emitter_config):
@@ -142,67 +207,6 @@ class Vivarium:
         self.step_paths[path] = instance
 
 
-    def visualize(self, filename=None, out_dir=None, **kwargs):
-        return plot_bigraph(
-            state=self.composite.state,
-            schema=self.composite.composition,
-            core=self.core,
-            out_dir=out_dir,
-            filename=filename,
-            **kwargs)
-
-
-    def get_document(self,
-                     schema=False,
-                     ):
-        document = {}
-
-        document['state'] = self.core.serialize(
-            self.composite.composition,
-            self.composite.state)
-
-        # if schema:
-        #     serialized_schema = self.core.representation(
-        #         self.composite.composition)
-        #     document['composition'] = serialized_schema
-
-        return document
-
-
-    def save(self,
-             filename='simulation.json',
-             outdir='out',
-             schema=True,
-             ):
-        # TODO: add in dependent packages and version
-        #   maybe packagename.typename?
-        # TODO: add in dependent types
-
-        document = self.get_document(schema=schema)
-
-        # save the dictionary to a JSON file
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-        filename = os.path.join(outdir, filename)
-
-        # write the new data to the file
-        with open(filename, 'w') as json_file:
-            json.dump(document, json_file, indent=4)
-            print(f"Created new file: {filename}")
-
-
-    def find_package(self, package):
-        pass
-
-
-    def run(self, interval):
-        self.composite.run(interval)
-
-
-    def step(self):
-        self.composite.update({}, 0)
-
-
     def get_results(self, queries=None):
         results = self.composite.gather_results(queries=queries)
         return results[('emitter',)]
@@ -234,6 +238,15 @@ class Vivarium:
 
         return timeseries
 
+
+    def visualize(self, filename=None, out_dir=None, **kwargs):
+        return plot_bigraph(
+            state=self.composite.state,
+            schema=self.composite.composition,
+            core=self.core,
+            out_dir=out_dir,
+            filename=filename,
+            **kwargs)
 
 
 def example_package():

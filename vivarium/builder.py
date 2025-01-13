@@ -305,23 +305,23 @@ class Builder:
         self.schema =composite.composition
         return composite
 
-    def document(self):
-        return self.core.serialize(
-            self.schema,
-            self.tree)
+    # def document(self):
+    #     return self.core.serialize(
+    #         self.schema,
+    #         self.tree)
 
-    def write(self, filename, outdir='out'):
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
-        filepath = f"{outdir}/{filename}.json"
-        document = self.document()
-
-        # Writing the dictionary to a JSON file
-        with open(filepath, 'w') as json_file:
-            json.dump(document, json_file, indent=4)
-
-        print(f"File '{filename}' successfully written in '{outdir}' directory.")
+    # def write(self, filename, outdir='out'):
+    #     if not os.path.exists(outdir):
+    #         os.makedirs(outdir)
+    #
+    #     filepath = f"{outdir}/{filename}.json"
+    #     document = self.document()
+    #
+    #     # Writing the dictionary to a JSON file
+    #     with open(filepath, 'w') as json_file:
+    #         json.dump(document, json_file, indent=4)
+    #
+    #     print(f"File '{filename}' successfully written in '{outdir}' directory.")
 
     def register_type(self, key, schema):
         self.core.type_registry.register(key, schema)
