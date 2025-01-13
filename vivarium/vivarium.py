@@ -29,12 +29,17 @@ class Vivarium:
                  processes=None,
                  types=None,
                  core=None,
-                 emitter_config=None,
+                 require=None,
+                 emitter=None,
                  ):
         processes = processes or {}
-        emitter_config = emitter_config or {"mode": "all"}
+        types = types or {}
+        emitter = emitter or "all"
 
         self.document = document or {"state": {}}
+
+        # TODO make this call self.add_emitter instead of using Composite's method
+        self.document['emitter'] = {"mode": emitter}
 
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
@@ -48,16 +53,11 @@ class Vivarium:
             self.core.register_types(types)
 
         # TODO register other packages
-        if 'require' in self.document:
-            self.require = document['require']
-            for require in self.require:
-                package = self.find_package(require)
+        if require:
+            self.require = require
+            for package in self.require:
+                package = self.find_package(package)
                 self.core.register_types(package.get('types', {}))
-
-        # TODO make this call self.add_emitter instead of using Composite's method
-        if 'emitter' not in self.document:
-            # self.add_emitter(emitter_config)
-            self.document['emitter'] = emitter_config
 
         # make the composite
         self.composite = Composite(
@@ -128,8 +128,8 @@ class Vivarium:
 
     def visualize(self, filename=None, out_dir=None, **kwargs):
         return plot_bigraph(
-            state=self.tree,
-            schema=self.schema,
+            state=self.composite.state,
+            schema=self.composite.composition,
             core=self.core,
             out_dir=out_dir,
             filename=filename,
