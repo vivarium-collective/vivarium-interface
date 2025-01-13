@@ -7,7 +7,9 @@ import json
 from process_bigraph import ProcessTypes, Composite
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
-from bigraph_schema import is_schema_key
+from bigraph_schema import is_schema_key, set_path
+from bigraph_viz import plot_bigraph
+
 
 
 class Vivarium:
@@ -25,6 +27,8 @@ class Vivarium:
     def __init__(self,
                  document=None,
                  processes=None,
+                 types=None,
+                 core=None,
                  emitter_config=None,
                  ):
         processes = processes or {}
@@ -32,19 +36,22 @@ class Vivarium:
 
         self.document = document
 
-        # make the core
-        self.core = ProcessTypes()
+        # if no core is provided, create a new one
+        self.core = core or ProcessTypes()
 
         # register processes
         self.core.register_processes(processes)
 
-        # register other packages
+        # register types
+        self.core.register_types(types)
+
+        # TODO register other packages
         self.require = document.pop('require', [])
         for require in self.require:
             package = self.find_package(require)
             self.core.register_types(package.get('types', {}))
 
-        # add emitter
+        # TODO make this call self.add_emitter instead of using Composite's method
         if 'emitter' not in self.document:
             # self.add_emitter(emitter_config)
             self.document['emitter'] = emitter_config
@@ -54,37 +61,72 @@ class Vivarium:
             self.document,
             core=self.core)
 
-    # TODO -- replace Composite's add emitter with this
-    # def add_emitter(self, emitter_config=None):
-    #     address = emitter_config.get('address', 'local:ram-emitter')
-    #     config = emitter_config.get('config', {})
-    #     mode = emitter_config.get('mode', 'none')
-    #
-    #     if mode == 'all':
-    #         inputs = {
-    #             key: [emitter_config.get('inputs', {}).get(key, key)]
-    #             for key in self.composite.state.keys()
-    #             if not is_schema_key(key)}
-    #
-    #     elif mode == 'none':
-    #         inputs = emitter_config.get('emit', {})
-    #
-    #     elif mode == 'bridge':
-    #         inputs = {}
-    #
-    #     elif mode == 'ports':
-    #         inputs = {}
-    #
-    #     if not 'emit' in config:
-    #         config['emit'] = {
-    #             input: 'any'
-    #             for input in inputs}
-    #
-    #     return {
-    #         '_type': 'step',
-    #         'address': address,
-    #         'config': config,
-    #         'inputs': inputs}
+
+    def read_emitter_config(self, emitter_config):
+
+        # upcoming deprecation warning
+        print("Warning: read_emitter_config() is deprecated and will be removed in a future version. "
+              "Use use Vivarium for managing simulations and emitters instead of Composite.")
+
+        address = emitter_config.get('address', 'local:ram-emitter')
+        config = emitter_config.get('config', {})
+        mode = emitter_config.get('mode', 'none')
+
+        if mode == 'all':
+            inputs = {
+                key: [emitter_config.get('inputs', {}).get(key, key)]
+                for key in self.composite.state.keys()
+                if not is_schema_key(key)}
+
+        elif mode == 'none':
+            inputs = emitter_config.get('emit', {})
+
+        elif mode == 'bridge':
+            inputs = {}
+
+        elif mode == 'ports':
+            inputs = {}
+
+        if not 'emit' in config:
+            config['emit'] = {
+                input: 'any'
+                for input in inputs}
+
+        return {
+            '_type': 'step',
+            'address': address,
+            'config': config,
+            'inputs': inputs}
+
+
+    def add_emitter(self, emitter_config):
+        path = tuple(emitter_config['path'])
+
+        step_config = self.read_emitter_config(emitter_config)
+        emitter = set_path(
+            {}, path, step_config)
+
+        self.composite.merge(
+            {},
+            emitter)
+
+        _, instance = self.composite.core.slice(
+            self.composite.composition,
+            self.composite.state,
+            path)
+
+        self.emitter_paths[path] = instance
+        self.step_paths[path] = instance
+
+
+    def visualize(self, filename=None, out_dir=None, **kwargs):
+        return plot_bigraph(
+            state=self.tree,
+            schema=self.schema,
+            core=self.core,
+            out_dir=out_dir,
+            filename=filename,
+            **kwargs)
 
 
     def get_document(self,
