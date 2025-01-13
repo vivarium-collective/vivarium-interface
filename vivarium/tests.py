@@ -57,6 +57,7 @@ def test_interface():
 
     # generate to fill in graph
     v.merge()
+    # v.generate()
 
     print('C STATE:')
     print(v)
