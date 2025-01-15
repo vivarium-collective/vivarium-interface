@@ -5,6 +5,7 @@ import os
 import json
 
 from IPython.display import display, Image
+from IPython.testing.tools import full_path
 from process_bigraph.emitter import deep_merge
 from process_bigraph import ProcessTypes, Composite, pf
 from process_bigraph.processes import TOY_PROCESSES
@@ -36,7 +37,7 @@ class Vivarium:
                  processes=None,
                  types=None,
                  core=None,
-                 require=None,
+                 require=None,  # TODO -- implement this
                  emitter=None,
                  ):
 
@@ -48,9 +49,9 @@ class Vivarium:
         self.core = core or ProcessTypes()
 
         # set the document
-        self.document = document or {"composition": {}, "state": {}}
+        document = document or {"composition": {}, "state": {}}
         # TODO make this call self.add_emitter instead of using Composite"s method
-        self.document["emitter"] = {"mode": emitter}
+        document["emitter"] = {"mode": emitter}
 
         # register processes
         self.register_processes(processes)
@@ -66,7 +67,17 @@ class Vivarium:
                 self.core.register_types(package.get("types", {}))
 
         # make the composite
-        self.composite = self.generate()
+        self.composite = Composite(
+            document,
+            core=self.core)
+
+
+    def get_state(self):
+        return self.composite.state
+
+
+    def get_schema(self):
+        return self.composite.composition
 
 
     def __repr__(self):
@@ -81,6 +92,7 @@ class Vivarium:
                     outputs=None,
                     path=None
                     ):
+        edge_type = "process"  # TODO -- does it matter if this is a step or a process?
         config = config or {}
         inputs = inputs or {}
         outputs = outputs or {}
@@ -89,42 +101,26 @@ class Vivarium:
         # make the process spec
         state = {
             name: {
-                "_type": "edge",
+                "_type": edge_type,
                 "address": f"local:{process_id}",  # TODO -- only support local right now?
                 "config": config,
                 "inputs": inputs,
                 "outputs": outputs,
-                "_inputs": {},
-                "_outputs": {},
+                # "_inputs": {},
+                # "_outputs": {},
             }
         }
 
         # nest the process in the composite at the given path
-        nested_state = set_path({}, path, state)
-
-        # update the document
-        self.document["state"] = deep_merge(self.document["state"], nested_state)
-
-        # remake the composite
-        self.composite = self.generate()
+        self.composite.merge({}, state, path)
 
 
     def generate(self):
+        document = self.make_document()
         composite = Composite(
-            self.document,
+            document,
             core=self.core)
         return composite
-
-
-    def fill(self):
-        self.composite.initialize(config=self.document)
-        self.make_document()
-
-    # def merge(self):
-    #     self.composite.merge(schema={},  # self.document.get("composition",{}),
-    #                          state=self.document.get("state",{}))
-    #     self.make_document(schema=True)
-    #     return self.composite
 
 
     def register_processes(self, processes):
@@ -145,6 +141,18 @@ class Vivarium:
             print("Warning: register_types() should be called with a dictionary of types.")
 
 
+    def process_schema(self, process_id):
+        process = self.core.process_registry.access(process_id)
+        return self.core.representation(process.config_schema)
+
+
+    def process_interface(self, process_id, config=None):
+        config = config or {}
+        process_class = self.core.process_registry.access(process_id)
+        process_instance = process_class(config, self.core)
+        return process_instance.interface()
+
+
     def print_processes(self):
         print(self.core.process_registry.list())
 
@@ -153,30 +161,25 @@ class Vivarium:
         print(self.core.list())
 
 
-    def make_document(self, schema=False):
-        self.document = {
-            "state": self.core.serialize(
-                self.composite.composition,
-                self.composite.state)}
+    def make_document(self):
+        serialized_state = self.composite.serialize_state()
 
-        # TODO -- fix recursion error
-        # if schema:
-        #     serialized_schema = self.core.representation(
-        #         composite.composition)
-        #     document["composition"] = serialized_schema
-
-        return self.document
+        # TODO fix RecursionError
+        # serialized_schema = self.core.representation(self.composite.composition)
+        return {
+            "state": serialized_state,
+            # "composition": serialized_schema,
+        }
 
 
     def save(self,
              filename="simulation.json",
              outdir="out",
-             schema=True,
              ):
         # TODO: add in dependent packages and version
         # TODO: add in dependent types
 
-        document = self.make_document(schema=schema)
+        document = self.make_document()
 
         # save the dictionary to JSON
         if not os.path.exists(outdir):
@@ -234,6 +237,8 @@ class Vivarium:
 
 
     def add_emitter(self, emitter_config):
+        # TODO -- this should add the emitter to the document, not directly to the composite
+
         path = tuple(emitter_config["path"])
 
         step_config = self.read_emitter_config(emitter_config)
@@ -244,7 +249,7 @@ class Vivarium:
             {},
             emitter)
 
-        _, instance = self.composite.core.slice(
+        _, instance = self.core.slice(
             self.composite.composition,
             self.composite.state,
             path)
@@ -301,23 +306,6 @@ class Vivarium:
         graph.render(output_path, format="png", cleanup=True)
         display(Image(filename=f"{output_path}.png"))
 
-
-def example_package():
-    return {
-        "name": "sbml",
-        "version": "1.1.33",
-        "types": {
-            "modelfile": "string"}}
-
-
-def example_document():
-    return {
-        "require": [
-            "sbml==1.1.33"],
-        "composition": {
-            "hello": "string"},
-        "state": {
-            "hello": "world!"}}
 
 
 def test_vivarium():

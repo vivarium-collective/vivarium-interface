@@ -31,7 +31,11 @@ TOY_PROCESSES = {
 
 
 def test_interface():
+
+    # make the vivarium
     v = Vivarium(processes=TOY_PROCESSES)
+
+
     print('TYPES:')
     v.print_types()
     print('PROCESSES:')
@@ -42,21 +46,33 @@ def test_interface():
     print(v)
     v.diagram(filename='A_STATE')
 
+    # print process schema and interface
+    print('PROCESS SCHEMA:')
+    print(v.process_schema('increase'))
+
+    process_config = {'rate': 1}
+    print('PROCESS INTERFACE:')
+    print(v.process_interface('increase', process_config))
+
+
     # add a process
     v.add_process(name='increase',
                   process_id='increase',
-                  config={'rate': 1},
-                  # inputs=None,
-                  # outputs=None,
+                  config=process_config,
+                  inputs={'level': ['level in']},
+                  outputs={'level': ['level out']},
                   # path=None
                   )
+
+
+    # v.wire_processes('increase')
 
     print('B STATE:')
     print(v)
     v.diagram(filename='B_STATE')
 
     # generate to fill in graph
-    v.fill()
+    # v.complete()
     # v.generate()
 
     print('C STATE:')
