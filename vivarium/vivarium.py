@@ -38,12 +38,12 @@ class Vivarium:
                  types=None,
                  core=None,
                  require=None,  # TODO -- implement this
-                 emitter=None,
+                 emitter_config=None,
                  ):
 
         processes = processes or {}
         types = types or {}
-        emitter = emitter or "all"
+        self.emitter_config = emitter_config or {"mode": "all", "path": ("emitter",)}
 
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
@@ -51,7 +51,7 @@ class Vivarium:
         # set the document
         document = document or {"composition": {}, "state": {}}
         # TODO make this call self.add_emitter instead of using Composite"s method
-        document["emitter"] = {"mode": emitter}
+        # document["emitter"] = {"mode": emitter}
 
         # register processes
         self.register_processes(processes)
@@ -70,6 +70,9 @@ class Vivarium:
         self.composite = Composite(
             document,
             core=self.core)
+
+        # # add an emitter
+        # self.add_emitter()
 
 
     def get_state(self):
@@ -210,18 +213,23 @@ class Vivarium:
         mode = emitter_config.get("mode", "none")
 
         if mode == "all":
-            inputs = {
-                key: [emitter_config.get("inputs", {}).get(key, key)]
-                for key in self.composite.state.keys()
-                if not is_schema_key(key)}
+            inputs = {}
+            for key in self.composite.state.keys():
+                if is_schema_key(key):  # skip schema keys
+                    continue
+                if self.core.inherits_from(self.composite.composition[key], "edge"):  # skip edges
+                    continue
+                inputs[key] = [emitter_config.get("inputs", {}).get(key, key)]
 
         elif mode == "none":
             inputs = emitter_config.get("emit", {})
 
         elif mode == "bridge":
+            print("Warning: emitter bridge mode not implemented.")
             inputs = {}
 
         elif mode == "ports":
+            print("Warning: emitter ports mode not implemented.")
             inputs = {}
 
         if not "emit" in config:
@@ -236,36 +244,55 @@ class Vivarium:
             "inputs": inputs}
 
 
-    def add_emitter(self, emitter_config):
-        # TODO -- this should add the emitter to the document, not directly to the composite
+    def add_emitter(self, emitter_config=None):
+        self.emitter_config = emitter_config or self.emitter_config
+        if self.composite.emitter_paths:
+            # TODO delete existing emitters
+            pass
 
-        path = tuple(emitter_config["path"])
+        emitter_state = self.read_emitter_config(self.emitter_config)
 
-        step_config = self.read_emitter_config(emitter_config)
-        emitter = set_path(
-            {}, path, step_config)
+        # set the emitter at the path
+        path = tuple(self.emitter_config.get("path", ('emitter',)))
+        emitter_state = set_path({}, path, emitter_state)
 
-        self.composite.merge(
-            {},
-            emitter)
+        self.composite.merge({},emitter_state)
 
         _, instance = self.core.slice(
             self.composite.composition,
             self.composite.state,
             path)
 
-        self.emitter_paths[path] = instance
-        self.step_paths[path] = instance
+        self.composite.emitter_paths[path] = instance
+        self.composite.step_paths[path] = instance
 
 
     def get_results(self, queries=None):
-        results = self.composite.gather_results(queries=queries)
-        return results[("emitter",)]
+        """
+        a map of paths to emitter --> queries for the emitter at that path
+        """
+
+        if queries is None:
+            queries = {
+                path: None
+                for path in self.composite.emitter_paths.keys()}
+
+        results = {}
+        for path, query in queries.items():
+            emitter = get_path(self.composite.state, path)
+            results[path] = emitter['instance'].query(query)
+
+        emitter_path = list(self.composite.emitter_paths.keys())[0]
+        return results.get(emitter_path)
+
+
+    # def get_results(self, queries=None):
+    #     results = self.composite.gather_results(queries=queries)
+    #     return results[("emitter",)]
 
 
     def get_timeseries(self, queries=None):
-        results = self.composite.gather_results(queries=queries)
-        emitter_results = results[("emitter",)]
+        emitter_results = self.get_results(queries=queries)
 
         def append_to_timeseries(timeseries, state, path=()):
             if isinstance(state, dict):

@@ -62,16 +62,22 @@ def test_interface():
                   # path=None
                   )
 
+    v.add_emitter()
     print('B STATE:')
     print(v)
     v.diagram(filename='B_STATE')
+
+    # run the vivarium
+    v.run(interval=10)
+
+    timeseries = v.get_timeseries()
+    print('TIMESERIES:')
+    print(timeseries)
 
     #
     # print('C STATE:')
     # print(v)
     # v.diagram(filename='C_STATE')
-
-    x=0
 
 
 
