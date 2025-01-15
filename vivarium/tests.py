@@ -25,7 +25,7 @@ class IncreaseProcess(Process):
             'level': state['level'] * self.config['rate']}
 
 
-TOY_PROCESSES = {
+DEMO_PROCESSES = {
     'increase': IncreaseProcess
 }
 
@@ -33,14 +33,12 @@ TOY_PROCESSES = {
 def test_interface():
 
     # make the vivarium
-    v = Vivarium(processes=TOY_PROCESSES)
-
+    v = Vivarium(processes=DEMO_PROCESSES)
 
     print('TYPES:')
     v.print_types()
     print('PROCESSES:')
     v.print_processes()
-
 
     print('A STATE:')
     print(v)
@@ -64,20 +62,14 @@ def test_interface():
                   # path=None
                   )
 
-
-    # v.wire_processes('increase')
-
     print('B STATE:')
     print(v)
     v.diagram(filename='B_STATE')
 
-    # generate to fill in graph
-    # v.complete()
-    # v.generate()
-
-    print('C STATE:')
-    print(v)
-    v.diagram(filename='C_STATE')
+    #
+    # print('C STATE:')
+    # print(v)
+    # v.diagram(filename='C_STATE')
 
     x=0
 
