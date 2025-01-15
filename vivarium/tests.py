@@ -46,7 +46,7 @@ def test_interface():
 
     # print process schema and interface
     print('PROCESS SCHEMA:')
-    print(v.process_schema('increase'))
+    print(v.process_config_schema('increase'))
 
     process_config = {'rate': 1}
     print('PROCESS INTERFACE:')

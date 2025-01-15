@@ -5,18 +5,12 @@ import os
 import json
 
 from IPython.display import display, Image
-from IPython.testing.tools import full_path
 from process_bigraph.emitter import deep_merge
 from process_bigraph import ProcessTypes, Composite, pf
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_viz import plot_bigraph
-
-
-# class BuilderNode:
-
-
 
 
 class Vivarium:
@@ -43,15 +37,14 @@ class Vivarium:
 
         processes = processes or {}
         types = types or {}
-        self.emitter_config = emitter_config or {"mode": "all", "path": ("emitter",)}
+        self.emitter_config = emitter_config or {"mode": "all",
+                                                 "path": ("emitter",)}
 
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
 
         # set the document
         document = document or {"composition": {}, "state": {}}
-        # TODO make this call self.add_emitter instead of using Composite"s method
-        # document["emitter"] = {"mode": emitter}
 
         # register processes
         self.register_processes(processes)
@@ -75,16 +68,16 @@ class Vivarium:
         # self.add_emitter()
 
 
+    def __repr__(self):
+        return f"Vivarium({pf(self.composite.state)})"
+
+
     def get_state(self):
         return self.composite.state
 
 
     def get_schema(self):
         return self.composite.composition
-
-
-    def __repr__(self):
-        return f"Vivarium({pf(self.composite.state)})"
 
 
     def add_process(self,
@@ -119,6 +112,9 @@ class Vivarium:
 
 
     def generate(self):
+        """
+        Generates a new composite.
+        """
         document = self.make_document()
         composite = Composite(
             document,
@@ -127,6 +123,9 @@ class Vivarium:
 
 
     def register_processes(self, processes):
+        """
+        Register processes with the core.
+        """
         if processes is None:
             pass
         elif isinstance(processes, dict):
@@ -136,6 +135,9 @@ class Vivarium:
 
 
     def register_types(self, types):
+        """
+        Register types with the core.
+        """
         if types is None:
             pass
         elif isinstance(types, dict):
@@ -144,12 +146,18 @@ class Vivarium:
             print("Warning: register_types() should be called with a dictionary of types.")
 
 
-    def process_schema(self, process_id):
+    def process_config_schema(self, process_id):
+        """
+        Get the config schema for a process.
+        """
         process = self.core.process_registry.access(process_id)
         return self.core.representation(process.config_schema)
 
 
     def process_interface(self, process_id, config=None):
+        """
+        Get the interface for a process.
+        """
         config = config or {}
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
@@ -157,10 +165,16 @@ class Vivarium:
 
 
     def print_processes(self):
+        """
+        Print the list of registered processes.
+        """
         print(self.core.process_registry.list())
 
 
     def print_types(self):
+        """
+        Print the list of registered types.
+        """
         print(self.core.list())
 
 
@@ -200,10 +214,16 @@ class Vivarium:
 
 
     def run(self, interval):
+        """
+        Run the simulation for a given interval.
+        """
         self.composite.run(interval)
 
 
     def step(self):
+        """
+        Run the simulation for a single step.
+        """
         self.composite.update({}, 0)
 
 
@@ -245,6 +265,10 @@ class Vivarium:
 
 
     def add_emitter(self, emitter_config=None):
+        """
+        Add an emitter to the composite.
+        """
+
         self.emitter_config = emitter_config or self.emitter_config
         if self.composite.emitter_paths:
             # TODO delete existing emitters
@@ -269,7 +293,7 @@ class Vivarium:
 
     def get_results(self, queries=None):
         """
-        a map of paths to emitter --> queries for the emitter at that path
+        retrieves results from the emitter
         """
 
         if queries is None:
@@ -282,16 +306,18 @@ class Vivarium:
             emitter = get_path(self.composite.state, path)
             results[path] = emitter['instance'].query(query)
 
-        emitter_path = list(self.composite.emitter_paths.keys())[0]
-        return results.get(emitter_path)
-
-
-    # def get_results(self, queries=None):
-    #     results = self.composite.gather_results(queries=queries)
-    #     return results[("emitter",)]
+        emitter_path = list(self.composite.emitter_paths.keys())
+        if len(emitter_path) >= 1:
+            emitter_path = emitter_path[0]
+            return results.get(emitter_path)
+        return results
 
 
     def get_timeseries(self, queries=None):
+        """
+        Gets the results and converts them to timeseries format
+        """
+
         emitter_results = self.get_results(queries=queries)
 
         def append_to_timeseries(timeseries, state, path=()):
@@ -318,6 +344,9 @@ class Vivarium:
 
 
     def diagram(self, filename="diagram", out_dir="out", **kwargs):
+        """
+        Generate a bigraph-viz diagram of the composite.
+        """
         kwargs["dpi"] = kwargs.get("dpi", "140")
         graph = plot_bigraph(
             state=self.composite.state,
