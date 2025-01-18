@@ -91,7 +91,7 @@ class Vivarium:
         state = {
             name: {
                 "_type": type or 'any',
-                "value": value
+                "_value": value
             }
         }
 

@@ -72,7 +72,7 @@ def test_interface():
     v.diagram(filename='C_STATE')
 
     # add more states
-    v.add_object(name='AA', path=['level in'], value=1)
+    v.add_object(name='AA', path=['top'], value=1)
     print(v)
     v.diagram(filename='D_STATE')
 
