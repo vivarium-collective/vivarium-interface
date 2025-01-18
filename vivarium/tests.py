@@ -40,9 +40,6 @@ def test_interface():
     # print('PROCESSES:')
     # v.print_processes()
 
-    print(v)
-    v.diagram(filename='A_STATE')
-
     # print process schema and interface
     print(f'PROCESS SCHEMA: '
           f'{v.process_schema("increase")}')
@@ -56,25 +53,25 @@ def test_interface():
     v.add_process(name='increase',
                   process_id='increase',
                   config=process_config,
-                  inputs={'level': ['level in']},
-                  outputs={'level': ['level out']},
+                  inputs={'level': ['top', 'level in']},
+                  outputs={'level': ['top', 'level out']},
                   # path=None
                   )
 
 
     print(v)
-    v.diagram(filename='B_STATE')
+    v.diagram(filename='A_STATE')
 
 
     # add an emitter
     v.add_emitter()
     print(v)
-    v.diagram(filename='C_STATE')
+    v.diagram(filename='B_STATE')
 
     # add more states
     v.add_object(name='AA', path=['top'], value=1)
     print(v)
-    v.diagram(filename='D_STATE')
+    v.diagram(filename='C_STATE')
 
 
 

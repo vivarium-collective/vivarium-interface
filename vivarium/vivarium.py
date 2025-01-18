@@ -129,6 +129,24 @@ class Vivarium:
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
 
+    def connect_process(self,
+                        process_name,
+                        inputs=None,
+                        outputs=None,
+                        path=None
+                        ):
+        inputs = inputs or {}
+        outputs = outputs or {}
+        path = path or ()
+
+        state = {
+            process_name: {
+                "inputs": inputs,
+                "outputs": outputs,
+            }
+        }
+        # nest the process in the composite at the given path
+        self.composite.merge({}, state, path)
 
     def generate(self):
         """
@@ -380,7 +398,6 @@ class Vivarium:
         #     out_dir=out_dir,
         #     **kwargs)
 
-        # kwargs["dpi"] = dpi
         graph = plot_bigraph(
             state=self.composite.state,
             schema=self.composite.composition,
