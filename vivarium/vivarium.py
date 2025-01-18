@@ -50,6 +50,12 @@ class Vivarium:
         assert not (document and document_path), "Vivarium can be initialized with either a document or document_path, not both."
         document = document or {"composition": {}, "state": {}}
         if document_path:
+            # check if document_path is a json file
+            if not document_path.endswith(".json"):
+                raise ValueError("Document path must be a JSON file.")
+
+            # load the document from the file
+            document_path = os.path.join(os.getcwd(), document_path)
             with open(document_path, "r") as json_file:
                 document = json.load(json_file)
 
@@ -241,10 +247,11 @@ class Vivarium:
              filename="simulation.json",
              outdir="out",
              ):
-        # TODO: add in dependent packages and version
-        # TODO: add in dependent types
-
+        # make the document
         document = self.make_document()
+
+        # Convert outdir to an absolute path
+        outdir = os.path.abspath(outdir)
 
         # save to JSON
         if not filename.endswith(".json"):

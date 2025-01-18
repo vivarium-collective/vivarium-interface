@@ -48,7 +48,6 @@ def test_interface():
     print(f'PROCESS INTERFACE: '
           f'{v.process_interface("increase", process_config)}')
 
-
     # add a process
     v.add_process(name='increase',
                   process_id='increase',
@@ -57,29 +56,29 @@ def test_interface():
                   outputs={'level': ['top', 'level out']},
                   # path=None
                   )
-
-
-    print(v)
     v.diagram(filename='A_STATE')
 
 
     # add an emitter
     v.add_emitter()
-    print(v)
     v.diagram(filename='B_STATE')
 
     # add more states
     v.add_object(name='AA', path=['top'], value=1)
-    print(v)
     v.diagram(filename='C_STATE')
-
-
 
     # run the vivarium
     v.run(interval=10)
 
     timeseries = v.get_timeseries()
     print(f'TIMESERIES: {timeseries}')
+
+    # %%
+    v.save(filename='demo1', outdir='out')
+
+    # reload the vivarium
+    v2 = Vivarium(document_path='out/demo1.json', processes=DEMO_PROCESSES)
+    v2.diagram(filename='D_STATE')
 
 
 if __name__ == '__main__':
