@@ -4,6 +4,7 @@ Vivarium is a simulation environment that runs composites in the process bigraph
 import os
 import json
 
+import inspect
 from IPython.display import display, Image
 from process_bigraph.emitter import deep_merge
 from process_bigraph import ProcessTypes, Composite, pf
@@ -20,16 +21,17 @@ class Vivarium:
 
     It manages packages and sets up the conditions for running simulations, and collects results through emitters.
 
-    Attributes:
-        document (dict): The configuration document for the simulation.
-        core (ProcessTypes): The core process types manager.
-        composite (Composite): The composite object managing the simulation.
-        require (list): List of required packages for the simulation.
+    Args:
+        document (dict, optional): The configuration document for the simulation, or path to the document.
+        processes (dict, optional): Dictionary of processes to register.
+        types (dict, optional): Dictionary of types to register.
+        core (ProcessTypes, optional): The core type system.
+        require (list, optional): List of required packages for the simulation.
+        emitter_config (dict, optional): Configuration for the emitter.
     """
 
     def __init__(self,
                  document=None,
-                 document_path=None,
                  processes=None,
                  types=None,
                  core=None,
@@ -47,17 +49,19 @@ class Vivarium:
         self.viz_core = VisualizeTypes()  # TODO -- make this a part of the core?
 
         # set the document
-        assert not (document and document_path), "Vivarium can be initialized with either a document or document_path, not both."
-        document = document or {"composition": {}, "state": {}}
-        if document_path:
-            # check if document_path is a json file
-            if not document_path.endswith(".json"):
+        if isinstance(document, str):
+            # check if document is a json file path
+            if not document.endswith(".json"):
                 raise ValueError("Document path must be a JSON file.")
 
             # load the document from the file
-            document_path = os.path.join(os.getcwd(), document_path)
+            document_path = os.path.join(os.getcwd(), document)
             with open(document_path, "r") as json_file:
                 document = json.load(json_file)
+        elif document is None:
+            document = {"composition": {}, "state": {}}
+        elif not isinstance(document, dict):
+            raise ValueError("Document must be a dictionary or a JSON file path.")
 
         # register processes
         self.register_processes(processes)
@@ -398,10 +402,20 @@ class Vivarium:
         return timeseries
 
 
-    def diagram(self, filename="diagram", out_dir="out", options=None, **kwargs):
+    def diagram(self,
+                filename="diagram",
+                out_dir="out",
+                options=None,
+                **kwargs
+                ):
         """
         Generate a bigraph-viz diagram of the composite.
         """
+        # Get the signature of plot_bigraph
+        plot_bigraph_signature = inspect.signature(plot_bigraph)
+
+        # Filter kwargs to only include those accepted by plot_bigraph
+        plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
         # graphviz = self.viz_core.generate_graphviz(
         #     self.composite.composition,
@@ -422,7 +436,7 @@ class Vivarium:
             core=self.core,
             # out_dir=out_dir,
             # filename=filename,
-            **kwargs)
+            **plot_bigraph_kwargs)
 
         # save and display the graph
         os.makedirs(out_dir, exist_ok=True)

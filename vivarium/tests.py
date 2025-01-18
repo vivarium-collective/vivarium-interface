@@ -56,12 +56,12 @@ def test_interface():
                   outputs={'level': ['top', 'level out']},
                   # path=None
                   )
-    v.diagram(filename='A_STATE')
+    # v.diagram(filename='A_STATE')
 
 
     # add an emitter
     v.add_emitter()
-    v.diagram(filename='B_STATE')
+    # v.diagram(filename='B_STATE')
 
     # add more states
     v.add_object(name='AA', path=['top'], value=1)
@@ -77,8 +77,12 @@ def test_interface():
     v.save(filename='demo1', outdir='out')
 
     # reload the vivarium
-    v2 = Vivarium(document_path='out/demo1.json', processes=DEMO_PROCESSES)
-    v2.diagram(filename='D_STATE')
+    v2 = Vivarium(document='out/demo1.json', processes=DEMO_PROCESSES)
+    v2.diagram(filename='D_STATE',
+               dpi='140',
+               show_values=True,
+               show_types=True
+               )
 
 
 if __name__ == '__main__':
