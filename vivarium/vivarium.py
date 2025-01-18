@@ -11,6 +11,7 @@ from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_viz import plot_bigraph
+from bigraph_viz.visualize import VisualizeTypes
 
 
 class Vivarium:
@@ -42,6 +43,7 @@ class Vivarium:
 
         # if no core is provided, create a new one
         self.core = core or ProcessTypes()
+        self.viz_core = VisualizeTypes()  # TODO -- make this a part of the core?
 
         # set the document
         document = document or {"composition": {}, "state": {}}
@@ -78,6 +80,23 @@ class Vivarium:
 
     def get_schema(self):
         return self.composite.composition
+
+
+    def add_object(self,
+                   name,
+                   type=None,
+                   path=None,
+                   value=None
+                   ):
+        state = {
+            name: {
+                "_type": type or 'any',
+                "value": value
+            }
+        }
+
+        # nest the process in the composite at the given path
+        self.composite.merge({}, state, path)
 
 
     def add_process(self,
@@ -146,7 +165,7 @@ class Vivarium:
             print("Warning: register_types() should be called with a dictionary of types.")
 
 
-    def process_config_schema(self, process_id):
+    def process_schema(self, process_id):
         """
         Get the config schema for a process.
         """
@@ -343,11 +362,25 @@ class Vivarium:
         return timeseries
 
 
-    def diagram(self, filename="diagram", out_dir="out", **kwargs):
+    def diagram(self, filename="diagram", out_dir="out", options=None, **kwargs):
         """
         Generate a bigraph-viz diagram of the composite.
         """
-        kwargs["dpi"] = kwargs.get("dpi", "140")
+
+        # graphviz = self.viz_core.generate_graphviz(
+        #     self.composite.composition,
+        #     self.composite.state,
+        #     (),
+        #     options
+        #     )
+        #
+        # self.viz_core.plot_graph(
+        #     graphviz,
+        #     filename=filename,
+        #     out_dir=out_dir,
+        #     **kwargs)
+
+        # kwargs["dpi"] = dpi
         graph = plot_bigraph(
             state=self.composite.state,
             schema=self.composite.composition,

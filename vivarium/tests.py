@@ -35,22 +35,21 @@ def test_interface():
     # make the vivarium
     v = Vivarium(processes=DEMO_PROCESSES)
 
-    print('TYPES:')
-    v.print_types()
-    print('PROCESSES:')
-    v.print_processes()
+    # print('TYPES:')
+    # v.print_types()
+    # print('PROCESSES:')
+    # v.print_processes()
 
-    print('A STATE:')
     print(v)
     v.diagram(filename='A_STATE')
 
     # print process schema and interface
-    print('PROCESS SCHEMA:')
-    print(v.process_config_schema('increase'))
+    print(f'PROCESS SCHEMA: '
+          f'{v.process_schema("increase")}')
 
     process_config = {'rate': 1}
-    print('PROCESS INTERFACE:')
-    print(v.process_interface('increase', process_config))
+    print(f'PROCESS INTERFACE: '
+          f'{v.process_interface("increase", process_config)}')
 
 
     # add a process
@@ -62,23 +61,28 @@ def test_interface():
                   # path=None
                   )
 
-    v.add_emitter()
-    print('B STATE:')
+
     print(v)
     v.diagram(filename='B_STATE')
+
+
+    # add an emitter
+    v.add_emitter()
+    print(v)
+    v.diagram(filename='C_STATE')
+
+    # add more states
+    v.add_object(name='AA', path=['level in'], value=1)
+    print(v)
+    v.diagram(filename='D_STATE')
+
+
 
     # run the vivarium
     v.run(interval=10)
 
     timeseries = v.get_timeseries()
-    print('TIMESERIES:')
-    print(timeseries)
-
-    #
-    # print('C STATE:')
-    # print(v)
-    # v.diagram(filename='C_STATE')
-
+    print(f'TIMESERIES: {timeseries}')
 
 
 if __name__ == '__main__':
