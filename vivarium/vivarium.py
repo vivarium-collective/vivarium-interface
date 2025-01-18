@@ -82,6 +82,8 @@ class Vivarium:
             core=self.core)
 
         # # add an emitter
+        # # TODO -- make it so add_emitter does not have to be called by user at the right time
+        # # support long-standing emitter rather than having it remade?
         # self.add_emitter()
 
 
