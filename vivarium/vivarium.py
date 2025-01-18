@@ -29,6 +29,7 @@ class Vivarium:
 
     def __init__(self,
                  document=None,
+                 document_path=None,
                  processes=None,
                  types=None,
                  core=None,
@@ -46,7 +47,11 @@ class Vivarium:
         self.viz_core = VisualizeTypes()  # TODO -- make this a part of the core?
 
         # set the document
+        assert not (document and document_path), "Vivarium can be initialized with either a document or document_path, not both."
         document = document or {"composition": {}, "state": {}}
+        if document_path:
+            with open(document_path, "r") as json_file:
+                document = json.load(json_file)
 
         # register processes
         self.register_processes(processes)
@@ -71,7 +76,8 @@ class Vivarium:
 
 
     def __repr__(self):
-        return f"Vivarium({pf(self.composite.state)})"
+        return (f"Vivarium( \n"
+                f"{pf(self.composite.state)})")
 
 
     def get_state(self):
@@ -216,13 +222,18 @@ class Vivarium:
 
 
     def make_document(self):
+
+        # TODO -- why are wires not saved?
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
         # serialized_schema = self.core.representation(self.composite.composition)
+        schema = self.composite.composition
+
+
         return {
             "state": serialized_state,
-            # "composition": serialized_schema,
+            "composition": schema,
         }
 
 
@@ -235,12 +246,12 @@ class Vivarium:
 
         document = self.make_document()
 
-        # save the dictionary to JSON
+        # save to JSON
+        if not filename.endswith(".json"):
+            filename = f"{filename}.json"
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         filename = os.path.join(outdir, filename)
-
-        # write the new data to the file
         with open(filename, "w") as json_file:
             json.dump(document, json_file, indent=4)
             print(f"Created new file: {filename}")
