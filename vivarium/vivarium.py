@@ -100,6 +100,10 @@ class Vivarium:
         return self.composite.composition
 
 
+    def get_dataclass(self, path=None):
+        path = path or ()
+        return self.core.dataclass(schema=self.composite.composition, path=path)
+
     def add_object(self,
                    name,
                    type=None,
@@ -116,6 +120,12 @@ class Vivarium:
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
 
+    def set_value(self,
+                    path,
+                    value
+                    ):
+        # TODO -- what's the correct way to do this?
+        self.composite.merge({}, {'_value': value}, path)
 
     def add_process(self,
                     name,

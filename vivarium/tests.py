@@ -52,26 +52,28 @@ def test_interface():
     v.add_process(name='increase',
                   process_id='increase',
                   config=process_config,
-                  inputs={'level': ['top', 'level in']},
-                  outputs={'level': ['top', 'level out']},
+                  inputs={'level': ['top', 'level_in']},
+                  outputs={'level': ['top', 'level_out']},
                   # path=None
                   )
     # v.diagram(filename='A_STATE')
-
+    v.set_value(path=['top', 'level_in'], value=1)
 
     # add an emitter
     v.add_emitter()
     # v.diagram(filename='B_STATE')
 
-    # add more states
-    v.add_object(name='AA', path=['top'], value=1)
-    v.diagram(filename='C_STATE')
 
     # run the vivarium
     v.run(interval=10)
 
     timeseries = v.get_timeseries()
     print(f'TIMESERIES: {timeseries}')
+
+
+    # add more states
+    v.add_object(name='AA', path=['top'], value=1)
+    v.diagram(filename='C_STATE')
 
     # %%
     v.save(filename='demo1', outdir='out')
@@ -81,8 +83,11 @@ def test_interface():
     v2.diagram(filename='D_STATE',
                dpi='140',
                show_values=True,
-               show_types=True
+               # show_types=True
                )
+
+    v2data = v2.get_dataclass()
+    breakpoint()
 
 
 if __name__ == '__main__':
