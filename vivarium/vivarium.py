@@ -104,6 +104,7 @@ class Vivarium:
         path = path or ()
         return self.core.dataclass(schema=self.composite.composition, path=path)
 
+
     def add_object(self,
                    name,
                    type=None,
