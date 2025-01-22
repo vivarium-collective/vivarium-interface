@@ -278,7 +278,7 @@ class Vivarium:
         filename = os.path.join(outdir, filename)
         with open(filename, "w") as json_file:
             json.dump(document, json_file, indent=4)
-            print(f"Created new file: {filename}")
+            print(f"Saved file: {filename}")
 
 
     def find_package(self, package):

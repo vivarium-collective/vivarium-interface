@@ -1,7 +1,6 @@
 # Vivarium-Interface
 
-Vivarium is a controlled virtual environment for composite process-bigraph simulations. 
-It manages packages, sets up the conditions for running simulations, and collects results.
+Vivarium is a controlled virtual environment for building and running composite process-bigraph simulations. 
 
 ## Features
 
@@ -10,3 +9,6 @@ It manages packages, sets up the conditions for running simulations, and collect
 - Serialize and save simulation states.
 - Generate visual diagrams of the simulation.
 - Retrieve and format simulation results.
+
+## Demos
+* [Vivarium Basic Demo](https://vivarium-collective.github.io/vivarium-interface/notebooks/demo.html).
