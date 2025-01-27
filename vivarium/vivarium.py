@@ -13,6 +13,7 @@ from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_viz import plot_bigraph
 from bigraph_viz.visualize import VisualizeTypes
+from vivarium.dict_to_object import NestedDictToObject
 
 
 class Vivarium:
@@ -77,9 +78,7 @@ class Vivarium:
                 self.core.register_types(package.get("types", {}))
 
         # make the composite
-        self.composite = Composite(
-            document,
-            core=self.core)
+        self.composite = self.generate_composite_from_document(document)
 
         # # add an emitter
         # # TODO -- make it so add_emitter does not have to be called by user at the right time
@@ -121,12 +120,14 @@ class Vivarium:
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
 
+
     def set_value(self,
                     path,
                     value
                     ):
         # TODO -- what's the correct way to do this?
         self.composite.merge({}, {'_value': value}, path)
+
 
     def add_process(self,
                     name,
@@ -158,6 +159,7 @@ class Vivarium:
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
 
+
     def connect_process(self,
                         process_name,
                         inputs=None,
@@ -177,6 +179,7 @@ class Vivarium:
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
 
+
     def generate(self):
         """
         Generates a new composite.
@@ -185,6 +188,19 @@ class Vivarium:
         composite = Composite(
             document,
             core=self.core)
+        return composite
+
+
+    def generate_composite_from_document(self, document):
+        """
+        Generates a new composite from a document.
+        """
+        composite = Composite(
+            document,
+            core=self.core)
+
+        # Wrap `state` for attribute-style access
+        composite.state = NestedDictToObject(composite.state)
         return composite
 
 
@@ -245,14 +261,11 @@ class Vivarium:
 
 
     def make_document(self):
-
-        # TODO -- why are wires not saved?
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
         # serialized_schema = self.core.representation(self.composite.composition)
         schema = self.composite.composition
-
 
         return {
             "state": serialized_state,
@@ -478,9 +491,13 @@ def test_vivarium():
     }
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
+
+    # test navigating the state
+    assert sim.composite.state.environment["0"].mass == initial_mass
+
+    # run simulation
     sim.run(interval=40.0)
     results = sim.get_timeseries()
-
     print(results)
 
     sim.save("test_vivarium.json")
