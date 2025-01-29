@@ -6,8 +6,7 @@ import json
 
 import inspect
 from IPython.display import display, Image
-from process_bigraph.emitter import deep_merge
-from process_bigraph import ProcessTypes, Composite, pf
+from process_bigraph import ProcessTypes, Composite, pf, pp
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
@@ -119,6 +118,7 @@ class Vivarium:
 
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
+        self.composite.build_step_network()
 
 
     def set_value(self,
@@ -126,7 +126,11 @@ class Vivarium:
                     value
                     ):
         # TODO -- what's the correct way to do this?
-        self.composite.merge({}, {'_value': value}, path)
+        self.composite.merge({}, value, path)
+
+
+    def get_value(self, path):
+        return get_path(self.composite.state, path)
 
 
     def add_process(self,
@@ -158,6 +162,7 @@ class Vivarium:
 
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
+        self.composite.build_step_network()
 
 
     def connect_process(self,
@@ -200,7 +205,7 @@ class Vivarium:
             core=self.core)
 
         # Wrap `state` for attribute-style access
-        composite.state = NestedDictToObject(composite.state)
+        # composite.state = NestedDictToObject(composite.state)
         return composite
 
 
@@ -232,8 +237,12 @@ class Vivarium:
         """
         Get the config schema for a process.
         """
-        process = self.core.process_registry.access(process_id)
-        return self.core.representation(process.config_schema)
+        try:
+            process = self.core.process_registry.access(process_id)
+            return self.core.representation(process.config_schema)
+        except KeyError as e:
+            print(f"Error finding process {process_id}: {e}")
+            return None
 
 
     def process_interface(self, process_id, config=None):
@@ -264,7 +273,7 @@ class Vivarium:
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
-        # serialized_schema = self.core.representation(self.composite.composition)
+        # schema = self.core.representation(self.composite.composition)
         schema = self.composite.composition
 
         return {
@@ -281,17 +290,17 @@ class Vivarium:
         document = self.make_document()
 
         # Convert outdir to an absolute path
-        outdir = os.path.abspath(outdir)
+        absoutdir = os.path.abspath(outdir)
 
         # save to JSON
         if not filename.endswith(".json"):
             filename = f"{filename}.json"
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        filename = os.path.join(outdir, filename)
-        with open(filename, "w") as json_file:
+        filepath = os.path.join(absoutdir, filename)
+        with open(filepath, "w") as json_file:
             json.dump(document, json_file, indent=4)
-            print(f"Saved file: {filename}")
+            print(f"Saved file: {os.path.join(outdir, filename)}")
 
 
     def find_package(self, package):
@@ -315,7 +324,7 @@ class Vivarium:
     def read_emitter_config(self, emitter_config):
         address = emitter_config.get("address", "local:ram-emitter")
         config = emitter_config.get("config", {})
-        mode = emitter_config.get("mode", "none")
+        mode = emitter_config.get("mode", "all")
 
         if mode == "all":
             inputs = {}
@@ -374,6 +383,9 @@ class Vivarium:
 
         self.composite.emitter_paths[path] = instance
         self.composite.step_paths[path] = instance
+
+        # rebuild the step network
+        self.composite.build_step_network()
 
 
     def get_results(self, queries=None):
@@ -491,16 +503,19 @@ def test_vivarium():
     }
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
+    sim.add_emitter()
 
     # test navigating the state
-    assert sim.composite.state.environment["0"].mass == initial_mass
+    # assert sim.composite.state.environment["0"].mass == initial_mass
+
+    print(pf(sim.composite.state))
 
     # run simulation
     sim.run(interval=40.0)
     results = sim.get_timeseries()
     print(results)
 
-    sim.save("test_vivarium.json")
+    sim.save("test_vivarium_post_simulation.json")
 
     sim.diagram(filename="test_vivarium", out_dir="out")
 

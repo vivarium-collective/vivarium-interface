@@ -6,7 +6,7 @@ from process_bigraph.processes import TOY_PROCESSES
 from vivarium import Vivarium
 
 
-class IncreaseProcess(Process):
+class IncreaseFloat(Process):
     config_schema = {
         'rate': {
             '_type': 'float',
@@ -14,19 +14,19 @@ class IncreaseProcess(Process):
 
     def inputs(self):
         return {
-            'level': 'float'}
+            'amount': 'float'}
 
     def outputs(self):
         return {
-            'level': 'float'}
+            'amount': 'float'}
 
     def update(self, state, interval):
         return {
-            'level': state['level'] * self.config['rate']}
+            'amount': state['amount'] * self.config['rate']}
 
 
 DEMO_PROCESSES = {
-    'increase': IncreaseProcess
+    'increase float': IncreaseFloat
 }
 
 
@@ -50,10 +50,10 @@ def test_interface():
 
     # add a process
     v.add_process(name='increase',
-                  process_id='increase',
+                  process_id='increase float',
                   config=process_config,
-                  inputs={'level': ['top', 'level_in']},
-                  outputs={'level': ['top', 'level_out']},
+                  inputs={'amount': ['top', 'level_in']},
+                  outputs={'amount': ['top', 'level_out']},
                   # path=None
                   )
     # v.diagram(filename='A_STATE')
