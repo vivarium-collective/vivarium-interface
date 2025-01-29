@@ -485,6 +485,7 @@ class Vivarium:
                 filename="diagram",
                 out_dir="out",
                 options=None,
+                show_emitter=False,
                 **kwargs
                 ):
         """
@@ -509,9 +510,20 @@ class Vivarium:
         #     out_dir=out_dir,
         #     **kwargs)
 
+        state = self.composite.serialize_state()
+        composition = self.composite.composition.copy()
+
+        if not show_emitter:
+            if 'emitter' in state:
+                del state['emitter']
+                del composition['emitter']
+            if 'global_time' in state:
+                del state['global_time']
+                del composition['global_time']
+
         graph = plot_bigraph(
-            state=self.composite.state,
-            schema=self.composite.composition,
+            state=state,
+            schema=composition,
             core=self.core,
             # out_dir=out_dir,
             # filename=filename,
@@ -607,6 +619,9 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     v.plot_timeseries()
+
+    # plot graph
+    v.diagram(filename='test_vivarium', out_dir='out')
 
 
 if __name__ == "__main__":
