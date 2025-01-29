@@ -14,7 +14,7 @@ class IncreaseFloat(Process):
 
     def inputs(self):
         return {
-            'amount': 'float'}
+            'amount': {'_type': 'float', '_default': 1.0}}
 
     def outputs(self):
         return {

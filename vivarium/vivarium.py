@@ -2,16 +2,20 @@
 Vivarium is a simulation environment that runs composites in the process bigraph.
 """
 import os
-import json
-
 import inspect
 from IPython.display import display, Image
+import json
+import matplotlib.pyplot as plt
+
+# process bigraph imports
 from process_bigraph import ProcessTypes, Composite, pf, pp
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_viz import plot_bigraph
 from bigraph_viz.visualize import VisualizeTypes
+
+# from vivarium
 from vivarium.dict_to_object import NestedDictToObject
 
 
@@ -304,6 +308,10 @@ class Vivarium:
     def find_package(self, package):
         pass
 
+    def reset(self):
+        document = self.make_document()
+        self.composite = self.generate_composite_from_document(document)
+
     def run(self, interval):
         """
         Run the simulation for a given interval.
@@ -436,6 +444,37 @@ class Vivarium:
 
         return timeseries
 
+    def plot_timeseries(self, queries=None, significant_digits=None):
+        """
+        Plots the timeseries data for all variables using matplotlib, each variable in its own subplot.
+
+        Args:
+            queries (dict, optional): Queries to retrieve specific data from the emitter.
+            significant_digits (int, optional): Number of significant digits to round off floats. Default is None.
+        """
+        timeseries = self.get_timeseries(queries=queries, significant_digits=significant_digits)
+        time = timeseries.pop('global_time')
+
+        num_vars = len(timeseries)
+        fig, axes = plt.subplots(num_vars, 1, figsize=(10, 5 * num_vars))
+
+        if num_vars == 1:
+            axes = [axes]
+
+        for ax, (var, data) in zip(axes, timeseries.items()):
+
+            # if data is less than time, pad with Nones
+            if len(data) < len(time):
+                data = [0] * (len(time) - len(data)) + data
+
+            ax.plot(time, data)
+            ax.set_title(var)
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Value')
+
+        plt.tight_layout()
+        plt.show()
+
     def diagram(self,
                 filename="diagram",
                 out_dir="out",
@@ -537,9 +576,31 @@ def test_build_vivarium():
     v.add_emitter()
     # run the simulation for 10 time units
     v.run(interval=10)
+
     # get the timeseries results
     timeseries = v.get_timeseries()
     print(timeseries)
+    # plot the timeseries
+    v.plot_timeseries()
+
+    # add another process and run again
+    v.add_object(name='AA', path=['top'], value=1)
+
+    # add another increase process
+    v.add_process(name='increase2',
+                  process_id='increase float',
+                  config={'rate': 2.0},
+                  inputs={'amount': ['top', 'AA']},
+                  outputs={'amount': ['top', 'AA']}
+                  )
+
+    # run the simulation for 10 time units
+    v.run(interval=10)
+
+    # plot the timeseries results
+    timeseries = v.get_timeseries()
+    print(timeseries)
+    v.plot_timeseries()
 
 
 if __name__ == "__main__":
