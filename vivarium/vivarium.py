@@ -275,6 +275,9 @@ class Vivarium:
         """
         print(self.core.list())
 
+    def access_type(self, type_id):
+        return self.core.access(type_id)
+
     def make_document(self):
         serialized_state = self.composite.serialize_state()
 
