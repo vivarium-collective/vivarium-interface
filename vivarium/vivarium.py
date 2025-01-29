@@ -15,6 +15,19 @@ from bigraph_viz.visualize import VisualizeTypes
 from vivarium.dict_to_object import NestedDictToObject
 
 
+def round_floats(data, significant_digits):
+    if not significant_digits:
+        return data
+    if isinstance(data, dict):
+        return {k: round_floats(v, significant_digits) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [round_floats(i, significant_digits) for i in data]
+    elif isinstance(data, float):
+        return round(data, significant_digits)
+    else:
+        return data
+
+
 class Vivarium:
     """
     Vivarium is a controlled virtual environment for composite process-bigraph simulations.
@@ -84,24 +97,23 @@ class Vivarium:
         # # support long-standing emitter rather than having it remade?
         # self.add_emitter()
 
-
     def __repr__(self):
         return (f"Vivarium( \n"
                 f"{pf(self.composite.state)})")
 
+    def reset_paths(self):
+        self.composite.find_instance_paths(self.composite.state)
+        self.composite.build_step_network()
 
     def get_state(self):
         return self.composite.state
 
-
     def get_schema(self):
         return self.composite.composition
-
 
     def get_dataclass(self, path=None):
         path = path or ()
         return self.core.dataclass(schema=self.composite.composition, path=path)
-
 
     def add_object(self,
                    name,
@@ -120,18 +132,15 @@ class Vivarium:
         self.composite.merge({}, state, path)
         self.composite.build_step_network()
 
-
     def set_value(self,
-                    path,
-                    value
-                    ):
+                  path,
+                  value
+                  ):
         # TODO -- what's the correct way to do this?
         self.composite.merge({}, value, path)
 
-
     def get_value(self, path):
         return get_path(self.composite.state, path)
-
 
     def add_process(self,
                     name,
@@ -162,8 +171,7 @@ class Vivarium:
 
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
-        self.composite.build_step_network()
-
+        self.reset_paths()
 
     def connect_process(self,
                         process_name,
@@ -183,7 +191,7 @@ class Vivarium:
         }
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
-
+        self.composite.build_step_network()
 
     def generate(self):
         """
@@ -194,7 +202,6 @@ class Vivarium:
             document,
             core=self.core)
         return composite
-
 
     def generate_composite_from_document(self, document):
         """
@@ -208,7 +215,6 @@ class Vivarium:
         # composite.state = NestedDictToObject(composite.state)
         return composite
 
-
     def register_processes(self, processes):
         """
         Register processes with the core.
@@ -219,7 +225,6 @@ class Vivarium:
             self.core.register_processes(processes)
         else:
             print("Warning: register_processes() should be called with a dictionary of processes.")
-
 
     def register_types(self, types):
         """
@@ -232,7 +237,6 @@ class Vivarium:
         else:
             print("Warning: register_types() should be called with a dictionary of types.")
 
-
     def process_schema(self, process_id):
         """
         Get the config schema for a process.
@@ -244,7 +248,6 @@ class Vivarium:
             print(f"Error finding process {process_id}: {e}")
             return None
 
-
     def process_interface(self, process_id, config=None):
         """
         Get the interface for a process.
@@ -254,20 +257,17 @@ class Vivarium:
         process_instance = process_class(config, self.core)
         return process_instance.interface()
 
-
     def print_processes(self):
         """
         Print the list of registered processes.
         """
         print(self.core.process_registry.list())
 
-
     def print_types(self):
         """
         Print the list of registered types.
         """
         print(self.core.list())
-
 
     def make_document(self):
         serialized_state = self.composite.serialize_state()
@@ -280,7 +280,6 @@ class Vivarium:
             "state": serialized_state,
             "composition": schema,
         }
-
 
     def save(self,
              filename="simulation.json",
@@ -302,10 +301,8 @@ class Vivarium:
             json.dump(document, json_file, indent=4)
             print(f"Saved file: {os.path.join(outdir, filename)}")
 
-
     def find_package(self, package):
         pass
-
 
     def run(self, interval):
         """
@@ -313,13 +310,11 @@ class Vivarium:
         """
         self.composite.run(interval)
 
-
     def step(self):
         """
         Run the simulation for a single step.
         """
         self.composite.update({}, 0)
-
 
     def read_emitter_config(self, emitter_config):
         address = emitter_config.get("address", "local:ram-emitter")
@@ -357,25 +352,22 @@ class Vivarium:
             "config": config,
             "inputs": inputs}
 
-
     def add_emitter(self, emitter_config=None):
         """
         Add an emitter to the composite.
         """
 
         self.emitter_config = emitter_config or self.emitter_config
-        if self.composite.emitter_paths:
-            # TODO delete existing emitters
-            pass
-
         emitter_state = self.read_emitter_config(self.emitter_config)
 
         # set the emitter at the path
         path = tuple(self.emitter_config.get("path", ('emitter',)))
         emitter_state = set_path({}, path, emitter_state)
 
-        self.composite.merge({},emitter_state)
+        self.composite.merge({}, emitter_state)
 
+        # TODO -- this is a hack to get the emitter to show up in the state
+        # TODO -- this should be done in the merge function
         _, instance = self.core.slice(
             self.composite.composition,
             self.composite.state,
@@ -387,8 +379,10 @@ class Vivarium:
         # rebuild the step network
         self.composite.build_step_network()
 
-
-    def get_results(self, queries=None):
+    def get_results(self,
+                    queries=None,
+                    significant_digits=None
+                    ):
         """
         retrieves results from the emitter
         """
@@ -406,16 +400,19 @@ class Vivarium:
         emitter_path = list(self.composite.emitter_paths.keys())
         if len(emitter_path) >= 1:
             emitter_path = emitter_path[0]
-            return results.get(emitter_path)
-        return results
+            results = results.get(emitter_path)
+        return round_floats(results, significant_digits=significant_digits)
 
-
-    def get_timeseries(self, queries=None):
+    def get_timeseries(self,
+                       queries=None,
+                       significant_digits=None
+                       ):
         """
         Gets the results and converts them to timeseries format
         """
 
-        emitter_results = self.get_results(queries=queries)
+        emitter_results = self.get_results(queries=queries,
+                                           significant_digits=significant_digits)
 
         def append_to_timeseries(timeseries, state, path=()):
             if isinstance(state, dict):
@@ -438,7 +435,6 @@ class Vivarium:
         timeseries = {".".join(key): value for key, value in timeseries.items()}
 
         return timeseries
-
 
     def diagram(self,
                 filename="diagram",
@@ -483,7 +479,6 @@ class Vivarium:
         display(Image(filename=f"{output_path}.png"))
 
 
-
 def test_vivarium():
     initial_mass = 1.0
 
@@ -520,5 +515,33 @@ def test_vivarium():
     sim.diagram(filename="test_vivarium", out_dir="out")
 
 
+def test_build_vivarium():
+    from vivarium.tests import DEMO_PROCESSES
+
+    v = Vivarium(processes=DEMO_PROCESSES)
+    # add an increase process called 'increase process'
+    v.add_process(name='increase',
+                  process_id='increase float',  # this is the process id
+                  config={'rate': 1.1},  # set according to the config schema
+                  )
+    # connect the 'increase' process to the state through its inputs and outputs
+    v.connect_process(
+        process_name='increase',
+        inputs={'amount': ['top', 'A']},
+        outputs={'amount': ['top', 'A']}
+    )
+    # set value of 'top.A' to 100
+    v.set_value(path=['top', 'A'], value=100.0)
+    print(v.get_value(path=['top', 'A']))
+    # add an emitter to save the history
+    v.add_emitter()
+    # run the simulation for 10 time units
+    v.run(interval=10)
+    # get the timeseries results
+    timeseries = v.get_timeseries()
+    print(timeseries)
+
+
 if __name__ == "__main__":
-    test_vivarium()
+    # test_vivarium()
+    test_build_vivarium()
