@@ -326,10 +326,10 @@ class Vivarium:
         """
         self.composite.update({}, 0)
 
-    def read_emitter_config(self, emitter_config):
-        address = emitter_config.get("address", "local:ram-emitter")
-        config = emitter_config.get("config", {})
-        mode = emitter_config.get("mode", "all")
+    def _read_emitter_config(self):
+        address = self.emitter_config.get("address", "local:ram-emitter")
+        config = self.emitter_config.get("config", {})
+        mode = self.emitter_config.get("mode", "all")
 
         if mode == "all":
             inputs = {}
@@ -338,10 +338,10 @@ class Vivarium:
                     continue
                 if self.core.inherits_from(self.composite.composition[key], "edge"):  # skip edges
                     continue
-                inputs[key] = [emitter_config.get("inputs", {}).get(key, key)]
+                inputs[key] = [self.emitter_config.get("inputs", {}).get(key, key)]
 
         elif mode == "none":
-            inputs = emitter_config.get("emit", {})
+            inputs = self.emitter_config.get("emit", {})
 
         elif mode == "bridge":
             print("Warning: emitter bridge mode not implemented.")
@@ -362,13 +362,12 @@ class Vivarium:
             "config": config,
             "inputs": inputs}
 
-    def add_emitter(self, emitter_config=None):
+    def add_emitter(self):
         """
         Add an emitter to the composite.
         """
 
-        self.emitter_config = emitter_config or self.emitter_config
-        emitter_state = self.read_emitter_config(self.emitter_config)
+        emitter_state = self._read_emitter_config()
 
         # set the emitter at the path
         path = tuple(self.emitter_config.get("path", ('emitter',)))
