@@ -12,6 +12,7 @@ from process_bigraph import ProcessTypes, Composite, pf, pp
 from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
+from bigraph_schema.utilities import remove_path
 from bigraph_viz import plot_bigraph
 from bigraph_viz.visualize import VisualizeTypes
 
@@ -175,6 +176,7 @@ class Vivarium:
 
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
+        self.reset_emitters()
         self.reset_paths()
 
     def connect_process(self,
@@ -308,9 +310,9 @@ class Vivarium:
     def find_package(self, package):
         pass
 
-    def reset(self):
-        document = self.make_document()
-        self.composite = self.generate_composite_from_document(document)
+    # def reset(self):
+    #     document = self.make_document()
+    #     self.composite = self.generate_composite_from_document(document)
 
     def run(self, interval):
         """
@@ -386,6 +388,11 @@ class Vivarium:
 
         # rebuild the step network
         self.composite.build_step_network()
+
+    def reset_emitters(self):
+        for path, emitter in self.composite.emitter_paths.items():
+            remove_path(self.composite.state, path)
+            self.add_emitter()
 
     def get_results(self,
                     queries=None,
