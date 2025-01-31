@@ -16,9 +16,6 @@ from bigraph_schema.utilities import remove_path
 from bigraph_viz import plot_bigraph
 from bigraph_viz.visualize import VisualizeTypes
 
-# from vivarium
-from vivarium.dict_to_object import NestedDictToObject
-
 
 def round_floats(data, significant_digits):
     if not significant_digits:
@@ -31,6 +28,11 @@ def round_floats(data, significant_digits):
         return round(data, significant_digits)
     else:
         return data
+
+
+class VivariumTypes(ProcessTypes, VisualizeTypes):
+    def __init__(self):
+        super().__init__()
 
 
 class Vivarium:
@@ -63,8 +65,7 @@ class Vivarium:
                                                  "path": ("emitter",)}
 
         # if no core is provided, create a new one
-        self.core = core or ProcessTypes()
-        self.viz_core = VisualizeTypes()  # TODO -- make this a part of the core?
+        self.core = VivariumTypes()
 
         # set the document
         if isinstance(document, str):
@@ -500,18 +501,18 @@ class Vivarium:
         # Filter kwargs to only include those accepted by plot_bigraph
         plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
-        # graphviz = self.viz_core.generate_graphviz(
-        #     self.composite.composition,
-        #     self.composite.state,
-        #     (),
-        #     options
-        #     )
-        #
-        # self.viz_core.plot_graph(
-        #     graphviz,
-        #     filename=filename,
-        #     out_dir=out_dir,
-        #     **kwargs)
+        graphviz = self.core.generate_graphviz(
+            self.composite.composition,
+            self.composite.state,
+            (),
+            options
+            )
+        
+        self.core.plot_graph(
+            graphviz,
+            filename=filename,
+            out_dir=out_dir,
+            **kwargs)
 
         state = self.composite.serialize_state()
         composition = self.composite.composition.copy()
@@ -534,7 +535,7 @@ class Vivarium:
 
         # save and display the graph
         os.makedirs(out_dir, exist_ok=True)
-        output_path = os.path.join(out_dir, filename)
+        output_path = os.path.join(out_dir, f"{filename}_benchmark")
         graph.render(output_path, format="png", cleanup=True)
         display(Image(filename=f"{output_path}.png"))
 
@@ -577,6 +578,8 @@ def test_vivarium():
 
 def test_build_vivarium():
     from vivarium.tests import DEMO_PROCESSES
+
+    import ipdb; ipdb.set_trace()
 
     v = Vivarium(processes=DEMO_PROCESSES)
     # add an increase process called 'increase process'

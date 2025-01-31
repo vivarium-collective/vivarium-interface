@@ -10,3 +10,4 @@ build/
 
 process_bigraph.egg-info/
 out/
+*.egg-info/
