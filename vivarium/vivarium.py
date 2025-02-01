@@ -501,18 +501,18 @@ class Vivarium:
         # Filter kwargs to only include those accepted by plot_bigraph
         plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
-        graphviz = self.core.generate_graphviz(
-            self.composite.composition,
-            self.composite.state,
-            (),
-            options
-            )
-        
-        self.core.plot_graph(
-            graphviz,
-            filename=filename,
-            out_dir=out_dir,
-            **kwargs)
+        # graphviz = self.core.generate_graphviz(
+        #     self.composite.composition,
+        #     self.composite.state,
+        #     (),
+        #     options
+        #     )
+        #
+        # self.core.plot_graph(
+        #     graphviz,
+        #     filename=filename,
+        #     out_dir=out_dir,
+        #     graph_options=plot_bigraph_kwargs)
 
         state = self.composite.serialize_state()
         composition = self.composite.composition.copy()
@@ -578,8 +578,6 @@ def test_vivarium():
 
 def test_build_vivarium():
     from vivarium.tests import DEMO_PROCESSES
-
-    import ipdb; ipdb.set_trace()
 
     v = Vivarium(processes=DEMO_PROCESSES)
     # add an increase process called 'increase process'

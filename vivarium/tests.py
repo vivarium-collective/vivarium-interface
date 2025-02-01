@@ -75,7 +75,7 @@ def test_interface():
     v.add_object(name='AA', path=['top'], value=1)
     v.diagram(filename='C_STATE')
 
-    # %%
+    #
     v.save(filename='demo1', outdir='out')
 
     # reload the vivarium
