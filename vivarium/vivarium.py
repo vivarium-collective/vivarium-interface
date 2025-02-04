@@ -628,6 +628,29 @@ def test_build_vivarium():
     v.diagram(filename='test_vivarium', out_dir='out')
 
 
+def test_load_vivarium():
+    from vivarium.tests import DEMO_PROCESSES
+
+    # make a new Vivarium object (v2) from the saved file
+    v2 = Vivarium(document='out/demo1.json', processes=DEMO_PROCESSES)
+
+    # add another object and process
+    v2.add_object(name='C', path=['top'], value=1)
+    v2.add_process(name='increase3',
+                   process_id='increase float',
+                   config={'rate': -0.1},
+                   inputs={'amount': ['top', 'C']},
+                   outputs={'amount': ['top', 'C']}
+                   )
+
+    # display the current state as a diagram
+    v2.diagram(dpi='120',
+               show_values=True,
+               # show_types=True,
+               )
+
+
 if __name__ == "__main__":
     # test_vivarium()
     test_build_vivarium()
+    # test_load_vivarium()
