@@ -119,7 +119,8 @@ class Vivarium:
 
     def get_dataclass(self, path=None):
         path = path or ()
-        return self.core.dataclass(schema=self.composite.composition, path=path)
+        return self.core.dataclass(schema=self.composite.composition,
+                                   path=path)
 
     def add_object(self,
                    name,
@@ -186,16 +187,17 @@ class Vivarium:
                         outputs=None,
                         path=None
                         ):
-        inputs = inputs or {}
-        outputs = outputs or {}
         path = path or ()
+        state = {process_name: {}}
 
-        state = {
-            process_name: {
-                "inputs": inputs,
-                "outputs": outputs,
-            }
-        }
+        if inputs is not None:
+            assert isinstance(inputs, dict), "Inputs must be a dictionary."
+            state[process_name]["inputs"] = inputs
+
+        if outputs is not None:
+            assert isinstance(outputs, dict), "Outputs must be a dictionary."
+            state[process_name]["outputs"] = outputs
+
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
         self.composite.build_step_network()
@@ -489,7 +491,7 @@ class Vivarium:
                 filename="diagram",
                 out_dir="out",
                 options=None,
-                show_emitter=False,
+                remove_emitter=False,
                 **kwargs
                 ):
         """
@@ -517,7 +519,7 @@ class Vivarium:
         state = self.composite.serialize_state()
         composition = self.composite.composition.copy()
 
-        if not show_emitter:
+        if remove_emitter:
             if 'emitter' in state:
                 del state['emitter']
                 del composition['emitter']
@@ -616,16 +618,21 @@ def test_build_vivarium():
                   outputs={'amount': ['top', 'AA']}
                   )
 
+    # # run the simulation for 10 time units
+    # v.run(interval=10)
+    #
+    # # plot the timeseries results
+    # timeseries = v.get_timeseries()
+    # print(timeseries)
+    # v.plot_timeseries()
+    #
+    # # plot graph
+    # v.diagram(filename='test_vivarium', out_dir='out')
+
     # run the simulation for 10 time units
+    v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
-
-    # plot the timeseries results
-    timeseries = v.get_timeseries()
-    print(timeseries)
     v.plot_timeseries()
-
-    # plot graph
-    v.diagram(filename='test_vivarium', out_dir='out')
 
 
 def test_load_vivarium():
