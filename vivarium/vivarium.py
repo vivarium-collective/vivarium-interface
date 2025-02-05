@@ -632,7 +632,7 @@ def test_load_vivarium():
     from vivarium.tests import DEMO_PROCESSES
 
     # make a new Vivarium object (v2) from the saved file
-    v2 = Vivarium(document='out/demo1.json', processes=DEMO_PROCESSES)
+    v2 = Vivarium(document='../test_data/demo1.json', processes=DEMO_PROCESSES)
 
     # add another object and process
     v2.add_object(name='C', path=['top'], value=1)
