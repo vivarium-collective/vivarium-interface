@@ -6,6 +6,7 @@ import inspect
 from IPython.display import display, Image
 import json
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # process bigraph imports
 from process_bigraph import ProcessTypes, Composite, pf, pp
@@ -264,7 +265,12 @@ class Vivarium:
         config = config or {}
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
-        return process_instance.interface()
+        interface = process_instance.interface()
+        inputs_df = pd.DataFrame.from_dict(interface['inputs'], orient='index')
+        outputs_df = pd.DataFrame.from_dict(interface['outputs'], orient='index', columns=['Type'])
+        combined_df = pd.concat([inputs_df, outputs_df], keys=['Inputs', 'Outputs'])
+        return combined_df
+
 
     def print_processes(self):
         """
@@ -272,14 +278,28 @@ class Vivarium:
         """
         print(self.core.process_registry.list())
 
+    def get_processes(self):
+        """
+        Print the list of registered processes.
+        """
+        processes = self.core.process_registry.list()
+        return pd.DataFrame(processes, columns=['Process'])
+        # print(df)
+
+    def get_types(self):
+        types = self.core.list()
+        return pd.DataFrame(types, columns=['Type'])
+
+
     def print_types(self):
         """
         Print the list of registered types.
         """
         print(self.core.list())
 
-    def access_type(self, type_id):
-        return self.core.access(type_id)
+    def get_type(self, type_id):
+        type_info = self.core.access(type_id)
+        return pd.DataFrame(list(type_info.items()), columns=['Attribute', 'Value'])
 
     def make_document(self):
         serialized_state = self.composite.serialize_state()

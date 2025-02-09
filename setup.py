@@ -45,5 +45,6 @@ setup(
     install_requires=[
         "process-bigraph>=0.0.25",
         "bigraph-viz",
+        "pandas",
     ]
 )
