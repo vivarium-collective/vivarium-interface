@@ -266,6 +266,8 @@ class Vivarium:
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
         interface = process_instance.interface()
+
+        # Add function names to the inputs and outputs
         inputs_df = pd.DataFrame.from_dict(interface['inputs'], orient='index')
         outputs_df = pd.DataFrame.from_dict(interface['outputs'], orient='index', columns=['Type'])
         combined_df = pd.concat([inputs_df, outputs_df], keys=['Inputs', 'Outputs'])
@@ -476,7 +478,7 @@ class Vivarium:
 
         return timeseries
 
-    def plot_timeseries(self, queries=None, significant_digits=None):
+    def plot_timeseries(self, queries=None, significant_digits=None, display=True):
         """
         Plots the timeseries data for all variables using matplotlib, each variable in its own subplot.
 
@@ -505,7 +507,10 @@ class Vivarium:
             ax.set_ylabel('Value')
 
         plt.tight_layout()
-        plt.show()
+        if display:
+            plt.show()
+        return fig
+
 
     def diagram(self,
                 filename="diagram",
@@ -625,7 +630,7 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     # plot the timeseries
-    v.plot_timeseries()
+    fig1 = v.plot_timeseries(display=False)
 
     # add another process and run again
     v.add_object(name='AA', path=['top'], value=1)
@@ -652,7 +657,7 @@ def test_build_vivarium():
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
-    v.plot_timeseries()
+    fig2 = v.plot_timeseries(display=False)
 
 
 def test_load_vivarium():

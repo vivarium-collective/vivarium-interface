@@ -46,5 +46,7 @@ setup(
         "process-bigraph>=0.0.25",
         "bigraph-viz",
         "pandas",
+        "IPython",
+        "matplotlib",
     ]
 )
