@@ -42,11 +42,11 @@ def test_interface():
 
     # print process schema and interface
     print(f'PROCESS SCHEMA: '
-          f'{v.process_schema("increase")}')
+          f'{v.process_schema("increase float")}')
 
     process_config = {'rate': 1}
     print(f'PROCESS INTERFACE: '
-          f'{v.process_interface("increase", process_config)}')
+          f'{v.process_interface("increase float", process_config)}')
 
     # add a process
     v.add_process(name='increase',
@@ -87,7 +87,7 @@ def test_interface():
                )
 
     v2data = v2.get_dataclass()
-    breakpoint()
+    # breakpoint()
 
 
 if __name__ == '__main__':
