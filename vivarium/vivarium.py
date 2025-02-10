@@ -6,6 +6,7 @@ import inspect
 from IPython.display import display, Image
 import json
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # process bigraph imports
 from process_bigraph import ProcessTypes, Composite, pf, pp
@@ -119,7 +120,8 @@ class Vivarium:
 
     def get_dataclass(self, path=None):
         path = path or ()
-        return self.core.dataclass(schema=self.composite.composition, path=path)
+        return self.core.dataclass(schema=self.composite.composition,
+                                   path=path)
 
     def add_object(self,
                    name,
@@ -186,16 +188,17 @@ class Vivarium:
                         outputs=None,
                         path=None
                         ):
-        inputs = inputs or {}
-        outputs = outputs or {}
         path = path or ()
+        state = {process_name: {}}
 
-        state = {
-            process_name: {
-                "inputs": inputs,
-                "outputs": outputs,
-            }
-        }
+        if inputs is not None:
+            assert isinstance(inputs, dict), "Inputs must be a dictionary."
+            state[process_name]["inputs"] = inputs
+
+        if outputs is not None:
+            assert isinstance(outputs, dict), "Outputs must be a dictionary."
+            state[process_name]["outputs"] = outputs
+
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
         self.composite.build_step_network()
@@ -262,7 +265,14 @@ class Vivarium:
         config = config or {}
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
-        return process_instance.interface()
+        interface = process_instance.interface()
+
+        # Add function names to the inputs and outputs
+        inputs_df = pd.DataFrame.from_dict(interface['inputs'], orient='index')
+        outputs_df = pd.DataFrame.from_dict(interface['outputs'], orient='index', columns=['Type'])
+        combined_df = pd.concat([inputs_df, outputs_df], keys=['Inputs', 'Outputs'])
+        return combined_df
+
 
     def print_processes(self):
         """
@@ -270,14 +280,28 @@ class Vivarium:
         """
         print(self.core.process_registry.list())
 
+    def get_processes(self):
+        """
+        Print the list of registered processes.
+        """
+        processes = self.core.process_registry.list()
+        return pd.DataFrame(processes, columns=['Process'])
+        # print(df)
+
+    def get_types(self):
+        types = self.core.list()
+        return pd.DataFrame(types, columns=['Type'])
+
+
     def print_types(self):
         """
         Print the list of registered types.
         """
         print(self.core.list())
 
-    def access_type(self, type_id):
-        return self.core.access(type_id)
+    def get_type(self, type_id):
+        type_info = self.core.access(type_id)
+        return pd.DataFrame(list(type_info.items()), columns=['Attribute', 'Value'])
 
     def make_document(self):
         serialized_state = self.composite.serialize_state()
@@ -454,7 +478,7 @@ class Vivarium:
 
         return timeseries
 
-    def plot_timeseries(self, queries=None, significant_digits=None):
+    def plot_timeseries(self, queries=None, significant_digits=None, display=True):
         """
         Plots the timeseries data for all variables using matplotlib, each variable in its own subplot.
 
@@ -483,13 +507,16 @@ class Vivarium:
             ax.set_ylabel('Value')
 
         plt.tight_layout()
-        plt.show()
+        if display:
+            plt.show()
+        return fig
+
 
     def diagram(self,
                 filename="diagram",
                 out_dir="out",
                 options=None,
-                show_emitter=False,
+                remove_emitter=False,
                 **kwargs
                 ):
         """
@@ -501,23 +528,23 @@ class Vivarium:
         # Filter kwargs to only include those accepted by plot_bigraph
         plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
-        graphviz = self.core.generate_graphviz(
-            self.composite.composition,
-            self.composite.state,
-            (),
-            options
-            )
-        
-        self.core.plot_graph(
-            graphviz,
-            filename=filename,
-            out_dir=out_dir,
-            **kwargs)
+        # graphviz = self.core.generate_graphviz(
+        #     self.composite.composition,
+        #     self.composite.state,
+        #     (),
+        #     options
+        #     )
+        #
+        # self.core.plot_graph(
+        #     graphviz,
+        #     filename=filename,
+        #     out_dir=out_dir,
+        #     graph_options=plot_bigraph_kwargs)
 
         state = self.composite.serialize_state()
         composition = self.composite.composition.copy()
 
-        if not show_emitter:
+        if remove_emitter:
             if 'emitter' in state:
                 del state['emitter']
                 del composition['emitter']
@@ -579,8 +606,6 @@ def test_vivarium():
 def test_build_vivarium():
     from vivarium.tests import DEMO_PROCESSES
 
-    import ipdb; ipdb.set_trace()
-
     v = Vivarium(processes=DEMO_PROCESSES)
     # add an increase process called 'increase process'
     v.add_process(name='increase',
@@ -605,7 +630,7 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     # plot the timeseries
-    v.plot_timeseries()
+    fig1 = v.plot_timeseries(display=False)
 
     # add another process and run again
     v.add_object(name='AA', path=['top'], value=1)
@@ -618,18 +643,48 @@ def test_build_vivarium():
                   outputs={'amount': ['top', 'AA']}
                   )
 
+    # # run the simulation for 10 time units
+    # v.run(interval=10)
+    #
+    # # plot the timeseries results
+    # timeseries = v.get_timeseries()
+    # print(timeseries)
+    # v.plot_timeseries()
+    #
+    # # plot graph
+    # v.diagram(filename='test_vivarium', out_dir='out')
+
     # run the simulation for 10 time units
+    v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
+    fig2 = v.plot_timeseries(display=False)
 
-    # plot the timeseries results
-    timeseries = v.get_timeseries()
-    print(timeseries)
-    v.plot_timeseries()
 
-    # plot graph
-    v.diagram(filename='test_vivarium', out_dir='out')
+def test_load_vivarium():
+    from vivarium.tests import DEMO_PROCESSES
+    current_dir = os.path.dirname(__file__)
+    document_path = os.path.join(current_dir, '../test_data/demo1.json')
+
+    # make a new Vivarium object (v2) from the saved file
+    v2 = Vivarium(document=document_path, processes=DEMO_PROCESSES)
+
+    # add another object and process
+    v2.add_object(name='C', path=['top'], value=1)
+    v2.add_process(name='increase3',
+                   process_id='increase float',
+                   config={'rate': -0.1},
+                   inputs={'amount': ['top', 'C']},
+                   outputs={'amount': ['top', 'C']}
+                   )
+
+    # display the current state as a diagram
+    v2.diagram(dpi='120',
+               show_values=True,
+               # show_types=True,
+               )
 
 
 if __name__ == "__main__":
     # test_vivarium()
     test_build_vivarium()
+    # test_load_vivarium()
