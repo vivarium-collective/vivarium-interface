@@ -14,8 +14,7 @@ from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_schema.utilities import remove_path
-from bigraph_viz import plot_bigraph
-# from bigraph_viz.visualize import VisualizeTypes
+from bigraph_viz import plot_bigraph, VisualizeTypes
 
 
 def round_floats(data, significant_digits):
@@ -31,9 +30,9 @@ def round_floats(data, significant_digits):
         return data
 
 
-# class VivariumTypes(ProcessTypes, VisualizeTypes):
-#     def __init__(self):
-#         super().__init__()
+class VivariumTypes(ProcessTypes, VisualizeTypes):
+    def __init__(self):
+        super().__init__()
 
 
 class Vivarium:
@@ -66,8 +65,8 @@ class Vivarium:
                                                  "path": ("emitter",)}
 
         # if no core is provided, create a new one
-        # self.core = VivariumTypes()
-        self.core = ProcessTypes()
+        self.core = VivariumTypes()
+        # self.core = ProcessTypes()
 
         # set the document
         if isinstance(document, str):
@@ -529,43 +528,18 @@ class Vivarium:
         # Filter kwargs to only include those accepted by plot_bigraph
         plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
-        # graphviz = self.core.generate_graphviz(
-        #     self.composite.composition,
-        #     self.composite.state,
-        #     (),
-        #     options
-        #     )
-        #
-        # self.core.plot_graph(
-        #     graphviz,
-        #     filename=filename,
-        #     out_dir=out_dir,
-        #     graph_options=plot_bigraph_kwargs)
+        graph_dict = self.core.generate_graph_dict(
+            self.composite.composition,
+            self.composite.state,
+            (),
+            options
+            )
 
-        state = self.composite.serialize_state()
-        composition = self.composite.composition.copy()
-
-        if remove_emitter:
-            if 'emitter' in state:
-                del state['emitter']
-                del composition['emitter']
-            if 'global_time' in state:
-                del state['global_time']
-                del composition['global_time']
-
-        graph = plot_bigraph(
-            state=state,
-            schema=composition,
-            core=self.core,
-            # out_dir=out_dir,
-            # filename=filename,
-            **plot_bigraph_kwargs)
-
-        # save and display the graph
-        os.makedirs(out_dir, exist_ok=True)
-        output_path = os.path.join(out_dir, f"{filename}_benchmark")
-        graph.render(output_path, format="png", cleanup=True)
-        display(Image(filename=f"{output_path}.png"))
+        return self.core.plot_graph(
+            graph_dict,
+            filename=filename,
+            out_dir=out_dir,
+            options=plot_bigraph_kwargs)
 
 
 def test_vivarium():
@@ -591,6 +565,7 @@ def test_vivarium():
 
     # test navigating the state
     # assert sim.composite.state.environment["0"].mass == initial_mass
+    sim.diagram(filename="pre_simulation", out_dir="out")
 
     print(pf(sim.composite.state))
 
@@ -601,7 +576,7 @@ def test_vivarium():
 
     sim.save("test_vivarium_post_simulation.json")
 
-    sim.diagram(filename="test_vivarium", out_dir="out")
+    sim.diagram(filename="post_simulation", out_dir="out")
 
 
 def test_build_vivarium():
