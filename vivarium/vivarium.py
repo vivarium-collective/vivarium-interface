@@ -627,8 +627,8 @@ def test_build_vivarium():
     # print(timeseries)
     # v.plot_timeseries()
     #
-    # # plot graph
-    # v.diagram(filename='test_vivarium', out_dir='out')
+    # plot graph
+    v.diagram(filename='test_build_vivarium', out_dir='out')
 
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
@@ -656,6 +656,7 @@ def test_load_vivarium():
     # display the current state as a diagram
     v2.diagram(dpi='120',
                show_values=True,
+               filename='test_load_vivarium',
                # show_types=True,
                )
 
