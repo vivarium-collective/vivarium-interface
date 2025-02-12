@@ -14,8 +14,7 @@ from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_schema.utilities import remove_path
-from bigraph_viz import plot_bigraph
-# from bigraph_viz.visualize import VisualizeTypes
+from bigraph_viz import plot_bigraph, VisualizeTypes
 
 
 def round_floats(data, significant_digits):
@@ -31,9 +30,9 @@ def round_floats(data, significant_digits):
         return data
 
 
-# class VivariumTypes(ProcessTypes, VisualizeTypes):
-#     def __init__(self):
-#         super().__init__()
+class VivariumTypes(ProcessTypes, VisualizeTypes):
+    def __init__(self):
+        super().__init__()
 
 
 class Vivarium:
@@ -46,7 +45,7 @@ class Vivarium:
         document (dict, optional): The configuration document for the simulation, or path to the document.
         processes (dict, optional): Dictionary of processes to register.
         types (dict, optional): Dictionary of types to register.
-        core (ProcessTypes, optional): The core type system.
+        core (VivariumTypes, optional): The core type system.
         require (list, optional): List of required packages for the simulation.
         emitter_config (dict, optional): Configuration for the emitter.
     """
@@ -66,8 +65,7 @@ class Vivarium:
                                                  "path": ("emitter",)}
 
         # if no core is provided, create a new one
-        # self.core = VivariumTypes()
-        self.core = ProcessTypes()
+        self.core = VivariumTypes()
 
         # set the document
         if isinstance(document, str):
@@ -92,18 +90,14 @@ class Vivarium:
 
         # TODO register other packages
         if require:
-            self.require = require
-            for package in self.require:
-                package = self.find_package(package)
-                self.core.register_types(package.get("types", {}))
+            pass
+            # self.require = require
+            # for package in self.require:
+            #     package = self.find_package(package)
+            #     self.core.register_types(package.get("types", {}))
 
         # make the composite
         self.composite = self.generate_composite_from_document(document)
-
-        # # add an emitter
-        # # TODO -- make it so add_emitter does not have to be called by user at the right time
-        # # support long-standing emitter rather than having it remade?
-        # self.add_emitter()
 
     def __repr__(self):
         return (f"Vivarium( \n"
@@ -121,8 +115,7 @@ class Vivarium:
 
     def get_dataclass(self, path=None):
         path = path or ()
-        return self.core.dataclass(schema=self.composite.composition,
-                                   path=path)
+        return self.core.dataclass(schema=self.composite.composition, path=path)
 
     def add_object(self,
                    name,
@@ -145,7 +138,6 @@ class Vivarium:
                   path,
                   value
                   ):
-        # TODO -- what's the correct way to do this?
         self.composite.merge({}, value, path)
 
     def get_value(self, path):
@@ -218,12 +210,11 @@ class Vivarium:
         """
         Generates a new composite from a document.
         """
+        document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
         composite = Composite(
             document,
             core=self.core)
 
-        # Wrap `state` for attribute-style access
-        # composite.state = NestedDictToObject(composite.state)
         return composite
 
     def register_processes(self, processes):
@@ -274,7 +265,6 @@ class Vivarium:
         combined_df = pd.concat([inputs_df, outputs_df], keys=['Inputs', 'Outputs'])
         return combined_df
 
-
     def print_processes(self):
         """
         Print the list of registered processes.
@@ -287,12 +277,10 @@ class Vivarium:
         """
         processes = self.core.process_registry.list()
         return pd.DataFrame(processes, columns=['Process'])
-        # print(df)
 
     def get_types(self):
         types = self.core.list()
         return pd.DataFrame(types, columns=['Type'])
-
 
     def print_types(self):
         """
@@ -338,10 +326,6 @@ class Vivarium:
 
     def find_package(self, package):
         pass
-
-    # def reset(self):
-    #     document = self.make_document()
-    #     self.composite = self.generate_composite_from_document(document)
 
     def run(self, interval):
         """
@@ -512,7 +496,6 @@ class Vivarium:
             plt.show()
         return fig
 
-
     def diagram(self,
                 filename="diagram",
                 out_dir="out",
@@ -529,43 +512,18 @@ class Vivarium:
         # Filter kwargs to only include those accepted by plot_bigraph
         plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
 
-        # graphviz = self.core.generate_graphviz(
-        #     self.composite.composition,
-        #     self.composite.state,
-        #     (),
-        #     options
-        #     )
-        #
-        # self.core.plot_graph(
-        #     graphviz,
-        #     filename=filename,
-        #     out_dir=out_dir,
-        #     graph_options=plot_bigraph_kwargs)
+        graph_dict = self.core.generate_graph_dict(
+            self.composite.composition,
+            self.composite.state,
+            (),
+            options
+            )
 
-        state = self.composite.serialize_state()
-        composition = self.composite.composition.copy()
-
-        if remove_emitter:
-            if 'emitter' in state:
-                del state['emitter']
-                del composition['emitter']
-            if 'global_time' in state:
-                del state['global_time']
-                del composition['global_time']
-
-        graph = plot_bigraph(
-            state=state,
-            schema=composition,
-            core=self.core,
-            # out_dir=out_dir,
-            # filename=filename,
-            **plot_bigraph_kwargs)
-
-        # save and display the graph
-        os.makedirs(out_dir, exist_ok=True)
-        output_path = os.path.join(out_dir, f"{filename}_benchmark")
-        graph.render(output_path, format="png", cleanup=True)
-        display(Image(filename=f"{output_path}.png"))
+        return self.core.plot_graph(
+            graph_dict,
+            filename=filename,
+            out_dir=out_dir,
+            options=plot_bigraph_kwargs)
 
 
 def test_vivarium():
@@ -582,17 +540,15 @@ def test_vivarium():
                 "mass": initial_mass,
                 "grow_divide": grow_divide}}}
 
-    document = {
-        "state": environment,
-    }
+    document = {"state": environment}
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
     sim.add_emitter()
 
     # test navigating the state
     # assert sim.composite.state.environment["0"].mass == initial_mass
-
-    print(pf(sim.composite.state))
+    sim.save("test_vivarium_pre_simulation.json")
+    sim.diagram(filename="pre_simulation", out_dir="out")
 
     # run simulation
     sim.run(interval=40.0)
@@ -600,8 +556,7 @@ def test_vivarium():
     print(results)
 
     sim.save("test_vivarium_post_simulation.json")
-
-    sim.diagram(filename="test_vivarium", out_dir="out")
+    sim.diagram(filename="post_simulation", out_dir="out")
 
 
 def test_build_vivarium():
@@ -652,8 +607,8 @@ def test_build_vivarium():
     # print(timeseries)
     # v.plot_timeseries()
     #
-    # # plot graph
-    # v.diagram(filename='test_vivarium', out_dir='out')
+    # plot graph
+    v.diagram(filename='test_build_vivarium', out_dir='out')
 
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
@@ -681,11 +636,12 @@ def test_load_vivarium():
     # display the current state as a diagram
     v2.diagram(dpi='120',
                show_values=True,
+               filename='test_load_vivarium',
                # show_types=True,
                )
 
 
 if __name__ == "__main__":
-    # test_vivarium()
+    test_vivarium()
     test_build_vivarium()
-    # test_load_vivarium()
+    test_load_vivarium()
