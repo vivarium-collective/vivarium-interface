@@ -217,6 +217,7 @@ class Vivarium:
         """
         Generates a new composite from a document.
         """
+        document["state"] = self.core.deserialize(document["composition"], document["state"])
         composite = Composite(
             document,
             core=self.core)
@@ -556,18 +557,15 @@ def test_vivarium():
                 "mass": initial_mass,
                 "grow_divide": grow_divide}}}
 
-    document = {
-        "state": environment,
-    }
+    document = {"state": environment}
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
     sim.add_emitter()
 
     # test navigating the state
     # assert sim.composite.state.environment["0"].mass == initial_mass
+    sim.save("test_vivarium_pre_simulation.json")
     sim.diagram(filename="pre_simulation", out_dir="out")
-
-    print(pf(sim.composite.state))
 
     # run simulation
     sim.run(interval=40.0)
@@ -575,7 +573,6 @@ def test_vivarium():
     print(results)
 
     sim.save("test_vivarium_post_simulation.json")
-
     sim.diagram(filename="post_simulation", out_dir="out")
 
 
@@ -662,6 +659,6 @@ def test_load_vivarium():
 
 
 if __name__ == "__main__":
-    # test_vivarium()
+    test_vivarium()
     test_build_vivarium()
-    # test_load_vivarium()
+    test_load_vivarium()
