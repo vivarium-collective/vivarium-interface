@@ -15,7 +15,7 @@ from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_schema.utilities import remove_path
 from bigraph_viz import plot_bigraph
-from bigraph_viz.visualize import VisualizeTypes
+# from bigraph_viz.visualize import VisualizeTypes
 
 
 def round_floats(data, significant_digits):
@@ -31,9 +31,9 @@ def round_floats(data, significant_digits):
         return data
 
 
-class VivariumTypes(ProcessTypes, VisualizeTypes):
-    def __init__(self):
-        super().__init__()
+# class VivariumTypes(ProcessTypes, VisualizeTypes):
+#     def __init__(self):
+#         super().__init__()
 
 
 class Vivarium:
@@ -66,7 +66,8 @@ class Vivarium:
                                                  "path": ("emitter",)}
 
         # if no core is provided, create a new one
-        self.core = VivariumTypes()
+        # self.core = VivariumTypes()
+        self.core = ProcessTypes()
 
         # set the document
         if isinstance(document, str):
@@ -307,8 +308,8 @@ class Vivarium:
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
-        # schema = self.core.representation(self.composite.composition)
-        schema = self.composite.composition
+        schema = self.core.representation(self.composite.composition)
+        # schema = self.composite.composition
 
         return {
             "state": serialized_state,
