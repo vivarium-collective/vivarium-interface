@@ -210,7 +210,7 @@ class Vivarium:
         """
         Generates a new composite from a document.
         """
-        document["state"] = self.core.deserialize(document["composition"], document["state"])
+        document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
         composite = Composite(
             document,
             core=self.core)
