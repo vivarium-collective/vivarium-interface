@@ -45,7 +45,7 @@ class Vivarium:
         document (dict, optional): The configuration document for the simulation, or path to the document.
         processes (dict, optional): Dictionary of processes to register.
         types (dict, optional): Dictionary of types to register.
-        core (ProcessTypes, optional): The core type system.
+        core (VivariumTypes, optional): The core type system.
         require (list, optional): List of required packages for the simulation.
         emitter_config (dict, optional): Configuration for the emitter.
     """
@@ -66,7 +66,6 @@ class Vivarium:
 
         # if no core is provided, create a new one
         self.core = VivariumTypes()
-        # self.core = ProcessTypes()
 
         # set the document
         if isinstance(document, str):
@@ -91,18 +90,14 @@ class Vivarium:
 
         # TODO register other packages
         if require:
-            self.require = require
-            for package in self.require:
-                package = self.find_package(package)
-                self.core.register_types(package.get("types", {}))
+            pass
+            # self.require = require
+            # for package in self.require:
+            #     package = self.find_package(package)
+            #     self.core.register_types(package.get("types", {}))
 
         # make the composite
         self.composite = self.generate_composite_from_document(document)
-
-        # # add an emitter
-        # # TODO -- make it so add_emitter does not have to be called by user at the right time
-        # # support long-standing emitter rather than having it remade?
-        # self.add_emitter()
 
     def __repr__(self):
         return (f"Vivarium( \n"
@@ -120,8 +115,7 @@ class Vivarium:
 
     def get_dataclass(self, path=None):
         path = path or ()
-        return self.core.dataclass(schema=self.composite.composition,
-                                   path=path)
+        return self.core.dataclass(schema=self.composite.composition, path=path)
 
     def add_object(self,
                    name,
@@ -144,7 +138,6 @@ class Vivarium:
                   path,
                   value
                   ):
-        # TODO -- what's the correct way to do this?
         self.composite.merge({}, value, path)
 
     def get_value(self, path):
@@ -222,8 +215,6 @@ class Vivarium:
             document,
             core=self.core)
 
-        # Wrap `state` for attribute-style access
-        # composite.state = NestedDictToObject(composite.state)
         return composite
 
     def register_processes(self, processes):
@@ -274,7 +265,6 @@ class Vivarium:
         combined_df = pd.concat([inputs_df, outputs_df], keys=['Inputs', 'Outputs'])
         return combined_df
 
-
     def print_processes(self):
         """
         Print the list of registered processes.
@@ -287,12 +277,10 @@ class Vivarium:
         """
         processes = self.core.process_registry.list()
         return pd.DataFrame(processes, columns=['Process'])
-        # print(df)
 
     def get_types(self):
         types = self.core.list()
         return pd.DataFrame(types, columns=['Type'])
-
 
     def print_types(self):
         """
@@ -338,10 +326,6 @@ class Vivarium:
 
     def find_package(self, package):
         pass
-
-    # def reset(self):
-    #     document = self.make_document()
-    #     self.composite = self.generate_composite_from_document(document)
 
     def run(self, interval):
         """
@@ -511,7 +495,6 @@ class Vivarium:
         if display:
             plt.show()
         return fig
-
 
     def diagram(self,
                 filename="diagram",
