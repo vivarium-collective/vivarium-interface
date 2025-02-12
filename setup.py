@@ -48,5 +48,6 @@ setup(
         "pandas",
         "IPython",
         "matplotlib",
+        "graphviz",
     ]
 )
