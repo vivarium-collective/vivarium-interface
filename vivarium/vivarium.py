@@ -527,6 +527,7 @@ class Vivarium:
     def diagram(self,
                 filename=None,
                 out_dir=None,
+                remove_nodes=None,
                 remove_emitter=False,
                 **kwargs
                 ):
@@ -551,6 +552,11 @@ class Vivarium:
         viztype_kwargs = {
             k: v for k, v in kwargs.items()
             if k not in get_graphviz_kwargs}
+
+        # convert list of paths in 'top.A' format to tuple of paths in ('top', 'A') format
+        remove_nodes = remove_nodes or []
+        remove_nodes = [tuple(node.split('.')) if isinstance(node, str) else node for node in remove_nodes]
+        viztype_kwargs['remove_nodes'] = remove_nodes
 
         # generate the graph dict
         graph_dict = self.core.generate_graph_dict(

@@ -44,7 +44,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "process-bigraph>=0.0.25",
-        "bigraph-viz>=0.1.2",
+        "bigraph-viz>=0.1.3",
         "pandas",
         "IPython",
         "matplotlib",
