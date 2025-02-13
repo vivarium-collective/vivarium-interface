@@ -14,7 +14,8 @@ from process_bigraph.processes import TOY_PROCESSES
 from process_bigraph.processes.growth_division import grow_divide_agent
 from bigraph_schema import is_schema_key, set_path, get_path
 from bigraph_schema.utilities import remove_path
-from bigraph_viz import plot_bigraph, VisualizeTypes
+from bigraph_viz import VisualizeTypes
+from bigraph_viz.visualize_types import get_graphviz_fig
 
 
 def round_floats(data, significant_digits):
@@ -524,35 +525,47 @@ class Vivarium:
         return fig
 
     def diagram(self,
-                filename="diagram",
-                out_dir="out",
-                options=None,
+                filename=None,
+                out_dir=None,
                 remove_emitter=False,
                 **kwargs
                 ):
         """
         Generate a bigraph-viz diagram of the composite.
+
+        Args:
+            filename (str, optional): Name of the file to save the diagram. Default is None.
+            out_dir (str, optional): Directory to save the diagram. Default is None.
+            remove_emitter (bool, optional): Whether to remove the emitter from the diagram. Default is False.
+            **kwargs: Additional keyword arguments for get_graphviz_fig.
         """
-        # Get the signature of plot_bigraph
-        plot_bigraph_signature = inspect.signature(plot_bigraph)
+        # Get the signature of get_graphviz_fig
+        get_graphviz_fig_signature = inspect.signature(get_graphviz_fig)
 
-        # Filter kwargs to only include those accepted by plot_bigraph
-        plot_bigraph_kwargs = {
+        # Filter kwargs to only include those accepted by get_graphviz_fig
+        get_graphviz_kwargs = {
             k: v for k, v in kwargs.items()
-            if k in plot_bigraph_signature.parameters}
+            if k in get_graphviz_fig_signature.parameters}
 
+        # get the remaining kwargs
+        viztype_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in get_graphviz_kwargs}
+
+        # generate the graph dict
         graph_dict = self.core.generate_graph_dict(
             self.composite.composition,
             self.composite.state,
             (),
-            options
+            viztype_kwargs
             )
 
+        # get the graphviz figure
         return self.core.plot_graph(
             graph_dict,
             filename=filename,
             out_dir=out_dir,
-            options=plot_bigraph_kwargs)
+            options=get_graphviz_kwargs)
 
 
 def test_vivarium():
