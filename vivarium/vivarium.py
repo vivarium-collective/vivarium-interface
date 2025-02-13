@@ -459,7 +459,10 @@ class Vivarium:
         # Convert tuple keys to string keys for better readability
         timeseries = {".".join(key): value for key, value in timeseries.items()}
 
-        return timeseries
+        # Convert the timeseries dictionary to a pandas DataFrame
+        df = pd.DataFrame(timeseries)
+
+        return df
 
     def plot_timeseries(self,
                         query=None,
