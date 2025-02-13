@@ -407,38 +407,35 @@ class Vivarium:
             self.add_emitter()
 
     def get_results(self,
-                    queries=None,
+                    query=None,
                     significant_digits=None
                     ):
         """
         retrieves results from the emitter
         """
+        if query:
+            # parse each query in the list from 'top.A' to ('top', 'A')
+            query = [tuple(q.split('.')) for q in query]
+            if 'global_time' not in query:
+                query.append(('global_time',))
 
-        if queries is None:
-            queries = {
-                path: None
-                for path in self.composite.emitter_paths.keys()}
-
-        results = {}
-        for path, query in queries.items():
+        emitter_paths = list(self.composite.emitter_paths.keys())
+        results = []
+        for path in emitter_paths:
             emitter = get_path(self.composite.state, path)
-            results[path] = emitter['instance'].query(query)
+            results.extend(emitter['instance'].query(query))
 
-        emitter_path = list(self.composite.emitter_paths.keys())
-        if len(emitter_path) >= 1:
-            emitter_path = emitter_path[0]
-            results = results.get(emitter_path)
         return round_floats(results, significant_digits=significant_digits)
 
     def get_timeseries(self,
-                       queries=None,
+                       query=None,
                        significant_digits=None
                        ):
         """
         Gets the results and converts them to timeseries format
         """
 
-        emitter_results = self.get_results(queries=queries,
+        emitter_results = self.get_results(query=query,
                                            significant_digits=significant_digits)
 
         def append_to_timeseries(timeseries, state, path=()):
@@ -463,37 +460,67 @@ class Vivarium:
 
         return timeseries
 
-    def plot_timeseries(self, queries=None, significant_digits=None, display=True):
+    def plot_timeseries(self,
+                        query=None,
+                        significant_digits=None,
+                        subplot_size=(10, 5),
+                        ncols=1,
+                        combined_vars=None
+                        ):
         """
         Plots the timeseries data for all variables using matplotlib, each variable in its own subplot.
 
         Args:
-            queries (dict, optional): Queries to retrieve specific data from the emitter.
+            query (dict, optional): Queries to retrieve specific data from the emitter.
             significant_digits (int, optional): Number of significant digits to round off floats. Default is None.
+            subplot_size (tuple, optional): Size of each subplot. Default is (10, 5).
+            ncols (int, optional): Number of columns in the subplot grid. Default is 1.
+            combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
-        timeseries = self.get_timeseries(queries=queries, significant_digits=significant_digits)
+        timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
         time = timeseries.pop('global_time')
 
-        num_vars = len(timeseries)
-        fig, axes = plt.subplots(num_vars, 1, figsize=(10, 5 * num_vars))
+        if combined_vars is None:
+            combined_vars = []
 
-        if num_vars == 1:
-            axes = [axes]
+        # Flatten combined_vars and remove duplicates
+        combined_vars_flat = [var for sublist in combined_vars for var in sublist]
+        combined_vars_flat = list(set(combined_vars_flat))
 
-        for ax, (var, data) in zip(axes, timeseries.items()):
+        # Variables not in combined_vars
+        individual_vars = [var for var in timeseries if var not in combined_vars_flat]
 
-            # if data is less than time, pad with Nones
+        # Total number of subplots
+        num_vars = len(individual_vars) + len(combined_vars)
+        nrows = (num_vars + ncols - 1) // ncols
+
+        fig, axes = plt.subplots(nrows, ncols, figsize=(subplot_size[0] * ncols, subplot_size[1] * nrows))
+        axes = axes.flatten() if num_vars > 1 else [axes]
+
+        # Plot individual variables
+        for ax, var in zip(axes, individual_vars):
+            data = timeseries[var]
             if len(data) < len(time):
                 data = [0] * (len(time) - len(data)) + data
-
             ax.plot(time, data)
             ax.set_title(var)
             ax.set_xlabel('Time')
             ax.set_ylabel('Value')
 
+        # Plot combined variables
+        for ax, vars in zip(axes[len(individual_vars):], combined_vars):
+            for var in vars:
+                data = timeseries[var]
+                if len(data) < len(time):
+                    data = [0] * (len(time) - len(data)) + data
+                ax.plot(time, data, label=var)
+            ax.set_title(', '.join(vars))
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Value')
+            ax.legend()
+
         plt.tight_layout()
-        if display:
-            plt.show()
+        plt.close(fig)
         return fig
 
     def diagram(self,
@@ -510,7 +537,9 @@ class Vivarium:
         plot_bigraph_signature = inspect.signature(plot_bigraph)
 
         # Filter kwargs to only include those accepted by plot_bigraph
-        plot_bigraph_kwargs = {k: v for k, v in kwargs.items() if k in plot_bigraph_signature.parameters}
+        plot_bigraph_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k in plot_bigraph_signature.parameters}
 
         graph_dict = self.core.generate_graph_dict(
             self.composite.composition,
@@ -586,7 +615,7 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     # plot the timeseries
-    fig1 = v.plot_timeseries(display=False)
+    fig1 = v.plot_timeseries(show=False)
 
     # add another process and run again
     v.add_object(name='AA', path=['top'], value=1)
@@ -613,7 +642,7 @@ def test_build_vivarium():
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
-    fig2 = v.plot_timeseries(display=False)
+    fig2 = v.plot_timeseries(show=False)
 
 
 def test_load_vivarium():
