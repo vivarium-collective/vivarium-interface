@@ -463,7 +463,6 @@ class Vivarium:
     def plot_timeseries(self,
                         query=None,
                         significant_digits=None,
-                        show=True,
                         subplot_size=(10, 5),
                         ncols=1,
                         combined_vars=None
@@ -474,7 +473,6 @@ class Vivarium:
         Args:
             query (dict, optional): Queries to retrieve specific data from the emitter.
             significant_digits (int, optional): Number of significant digits to round off floats. Default is None.
-            show (bool, optional): Whether to display the plot. Default is True.
             subplot_size (tuple, optional): Size of each subplot. Default is (10, 5).
             ncols (int, optional): Number of columns in the subplot grid. Default is 1.
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
@@ -521,9 +519,8 @@ class Vivarium:
             ax.set_ylabel('Value')
             ax.legend()
 
-        # if show:
-        #     plt.tight_layout()
-        #     plt.show()
+        plt.tight_layout()
+        plt.close(fig)
         return fig
 
     def diagram(self,
