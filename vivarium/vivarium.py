@@ -517,7 +517,7 @@ class Vivarium:
             ax.set_title(', '.join(vars))
             ax.set_xlabel('Time')
             ax.set_ylabel('Value')
-            ax.legend()
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.tight_layout()
         plt.close(fig)
