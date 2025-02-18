@@ -36,6 +36,50 @@ class VivariumTypes(ProcessTypes, VisualizeTypes):
         super().__init__()
 
 
+def parse_path(path):
+    if isinstance(path, dict):
+        return {
+            key: parse_path(value)
+            for key, value in path.items()}
+    elif isinstance(path, str):
+        if path.startswith('/'):
+            return path.split('/')[1:]
+        else:
+            return [path]
+    else:
+        return path
+
+
+def render_path(path):
+    if isinstance(path, dict):
+        return {
+            key: render_path(value)
+            for key, value in path.items()}
+    elif isinstance(path, str):
+        if path.startswith('/'):
+            return path
+        else:
+            return '/' + path
+    elif isinstance(path, (tuple, list)):
+        return '/' + '/'.join(path)
+    else:
+        return path
+
+
+def render_type(type, core):
+    type = core.access(type)
+    rendered = {}
+    for key, value in type.items():
+        if is_schema_key(key):
+            if key == '_description':
+                rendered['description'] = value
+            elif key == '_default':
+                rendered['default'] = core.default(type)
+        elif isinstance(value, dict):
+            rendered[key] = render_type(value, core)
+    return rendered
+
+
 class Vivarium:
     """
     Vivarium is a controlled virtual environment for composite process-bigraph simulations.
@@ -139,6 +183,7 @@ class Vivarium:
                   path,
                   value
                   ):
+        path = parse_path(path)
         self.composite.merge({}, value, path)
 
     def get_value(self, path):
@@ -158,6 +203,12 @@ class Vivarium:
         outputs = outputs or {}
         path = path or ()
 
+        # convert string paths to lists
+        # TODO -- make this into a separate path-parsing function
+        for ports in [inputs, outputs]:
+            for port, port_path in ports.items():
+                ports[port] = parse_path(port_path)
+
         # make the process spec
         state = {
             name: {
@@ -166,8 +217,6 @@ class Vivarium:
                 "config": config,
                 "inputs": inputs,
                 "outputs": outputs,
-                # "_inputs": {},
-                # "_outputs": {},
             }
         }
 
@@ -259,6 +308,8 @@ class Vivarium:
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
         interface = process_instance.interface()
+        interface = self.core.access(interface)
+        interface = render_type(interface, self.core)
 
         # Add function names to the inputs and outputs
         inputs_df = pd.DataFrame.from_dict(interface['inputs'], orient='index')
@@ -291,6 +342,7 @@ class Vivarium:
 
     def get_type(self, type_id):
         type_info = self.core.access(type_id)
+        type_info = render_type(type_info, self.core)
         return pd.DataFrame(list(type_info.items()), columns=['Attribute', 'Value'])
 
     def make_document(self):
@@ -457,12 +509,11 @@ class Vivarium:
             append_to_timeseries(timeseries, state)
 
         # Convert tuple keys to string keys for better readability
-        timeseries = {".".join(key): value for key, value in timeseries.items()}
+        timeseries = {render_path(key): value for key, value in timeseries.items()}
 
         # Convert the timeseries dictionary to a pandas DataFrame
-        df = pd.DataFrame(timeseries)
+        return pd.DataFrame(timeseries)
 
-        return df
 
     def plot_timeseries(self,
                         query=None,

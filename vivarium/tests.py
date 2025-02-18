@@ -1,5 +1,5 @@
-from fileinput import filename
 
+from bigraph_schema.units import units
 from process_bigraph import Process
 from process_bigraph.processes import TOY_PROCESSES
 
@@ -10,24 +10,87 @@ class IncreaseFloat(Process):
     config_schema = {
         'rate': {
             '_type': 'float',
-            '_default': '0.1'}}
+            '_default': '0.1'
+        }
+    }
 
     def inputs(self):
         return {
-            'amount': {'_type': 'float', '_default': 1.0}}
+            'amount': {
+                '_type': 'float',
+                '_default': 1.0
+            }
+        }
 
     def outputs(self):
         return {
-            'amount': 'float'}
+            'amount': 'float'
+        }
 
     def update(self, state, interval):
         return {
-            'amount': state['amount'] * self.config['rate']}
+            'amount': state['amount'] * self.config['rate']
+        }
+
+
+class IncreaseMass(Process):
+    config_schema = {
+        'rate': {
+            '_type': '/time',
+            '_default': '0.1'
+        }
+    }
+
+    def inputs(self):
+        return {
+            'mass': {
+                '_type': 'mass',
+                '_default': 1.0 * units.gram
+            }
+        }
+
+    def outputs(self):
+        return {
+            'mass': 'mass'
+        }
+
+    def update(self, state, interval):
+        time = interval * units.s
+        return {
+            'mass': state['mass'] * self.config['rate'] * time  # TODO - interval should be a time unit
+        }
+
 
 
 DEMO_PROCESSES = {
-    'increase float': IncreaseFloat
+    'increase float': IncreaseFloat,
+    'increase mass': IncreaseMass
 }
+
+
+def test_units():
+    # make the vivarium
+    v = Vivarium(processes=DEMO_PROCESSES)
+
+    print(v.get_type('mass'))
+    print(v.process_schema('increase mass'))
+    print(v.process_interface('increase mass'))
+
+    # add a process
+    v.add_process(name='increase',
+                  process_id='increase mass',
+                  config={'rate': 1/units.s},
+                  inputs={'mass': '/units/mass'},   # TODO -- make slashes work
+                  outputs={'mass': '/units/mass'},
+                  )
+    v.add_emitter()
+    v.set_value(path='/units/mass', value=1*units.gram)  # TODO -- make this deserialize in vivarium
+
+    # run the vivarium
+    v.run(interval=10)
+
+    timeseries = v.get_timeseries()
+    print(f'TIMESERIES: {timeseries}')
 
 
 def test_interface():
@@ -92,4 +155,5 @@ def test_interface():
 
 if __name__ == '__main__':
     # test_vivarium()
-    test_interface()
+    # test_interface()
+    test_units()
