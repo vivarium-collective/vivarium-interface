@@ -108,6 +108,7 @@ class Vivarium:
         types = types or {}
         self.emitter_config = emitter_config or {"mode": "all",
                                                  "path": ("emitter",)}
+        self.emitter_paths = {}
 
         # if no core is provided, create a new one
         self.core = VivariumTypes()
@@ -384,6 +385,9 @@ class Vivarium:
         """
         Run the simulation for a given interval.
         """
+        if not self.emitter_paths:
+            self.add_emitter()
+
         self.composite.run(interval)
 
     def step(self):
@@ -448,14 +452,14 @@ class Vivarium:
             self.composite.state,
             path)
 
-        self.composite.emitter_paths[path] = instance
+        self.emitter_paths[path] = instance
         self.composite.step_paths[path] = instance
 
         # rebuild the step network
         self.composite.build_step_network()
 
     def reset_emitters(self):
-        for path, emitter in self.composite.emitter_paths.items():
+        for path, emitter in self.emitter_paths.items():
             remove_path(self.composite.state, path)
             self.add_emitter()
 
@@ -472,7 +476,7 @@ class Vivarium:
             if 'global_time' not in query:
                 query.append(('global_time',))
 
-        emitter_paths = list(self.composite.emitter_paths.keys())
+        emitter_paths = list(self.emitter_paths.keys())
         results = []
         for path in emitter_paths:
             emitter = get_path(self.composite.state, path)
@@ -533,7 +537,14 @@ class Vivarium:
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
         timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
-        time = timeseries.pop('global_time')
+
+        # get either global_time or /global_time
+        if 'global_time' in timeseries:
+            time = timeseries.pop('global_time')
+        elif '/global_time' in timeseries:
+            time = timeseries.pop('/global_time')
+        else:
+            raise KeyError("Neither 'global_time' nor '/global_time' found in timeseries.")
 
         if combined_vars is None:
             combined_vars = []
