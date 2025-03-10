@@ -261,7 +261,7 @@ class Vivarium:
         """
         Generates a new composite from a document.
         """
-        document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
+        # document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
         composite = Composite(
             document,
             core=self.core)
@@ -516,7 +516,10 @@ class Vivarium:
         timeseries = {render_path(key): value for key, value in timeseries.items()}
 
         # Convert the timeseries dictionary to a pandas DataFrame
-        return pd.DataFrame(timeseries)
+        results = pd.DataFrame.from_dict(timeseries, orient='index')
+        results = results.transpose()
+        return results
+        # return pd.DataFrame(timeseries)
 
 
     def plot_timeseries(self,
@@ -653,9 +656,16 @@ def test_vivarium():
                 "mass": initial_mass,
                 "grow_divide": grow_divide}}}
 
-    document = {"state": environment}
+    document = {
+        "state": environment,
+        'bridge': {
+            'inputs': {
+                'environment': ['environment']}}}
+
+    import ipdb; ipdb.set_trace()
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
+
     sim.add_emitter()
 
     # test navigating the state
@@ -756,5 +766,5 @@ def test_load_vivarium():
 
 if __name__ == "__main__":
     test_vivarium()
-    test_build_vivarium()
-    test_load_vivarium()
+    # test_build_vivarium()
+    # test_load_vivarium()
