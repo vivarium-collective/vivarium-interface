@@ -20,7 +20,7 @@ def register_step(input_types, output_types, config_schema):
     return decorator
 
 
-def test_function_step():
+def run_function_step():
     @register_step(
         input_types=["a", "b"],
         output_types=["c"],
@@ -39,4 +39,4 @@ def test_function_step():
 
 
 if __name__ == "__main__":
-    test_function_step()
+    run_function_step()
