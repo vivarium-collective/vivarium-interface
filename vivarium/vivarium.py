@@ -662,8 +662,6 @@ def test_vivarium():
             'inputs': {
                 'environment': ['environment']}}}
 
-    import ipdb; ipdb.set_trace()
-
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
 
     sim.add_emitter()
@@ -709,7 +707,7 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     # plot the timeseries
-    fig1 = v.plot_timeseries(show=False)
+    fig1 = v.plot_timeseries()
 
     # add another process and run again
     v.add_object(name='AA', path=['top'], value=1)
@@ -736,7 +734,7 @@ def test_build_vivarium():
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
-    fig2 = v.plot_timeseries(show=False)
+    fig2 = v.plot_timeseries()
 
 
 def test_load_vivarium():
