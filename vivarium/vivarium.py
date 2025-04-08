@@ -5,6 +5,8 @@ import os
 import inspect
 from IPython.display import display, Image
 import json
+
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -61,7 +63,8 @@ def render_path(path):
         else:
             return '/' + path
     elif isinstance(path, (tuple, list)):
-        return '/' + '/'.join(path)
+        strpath = [str(x) for x in path]
+        return '/' + '/'.join(strpath)
     else:
         return path
 
@@ -169,15 +172,22 @@ class Vivarium:
                    path=None,
                    value=None
                    ):
-        state = {
-            name: {
-                "_type": type or 'any',
-                "_value": value
+        state = {}
+        schema = {}
+        if isinstance(value, np.ndarray):
+            type = "array"
+            shape = value.shape
+            data = "float"  # TODO -- make this a parameter
+            schema[name] = {
+                '_type': type,
+                '_shape': shape,
+                '_data': data,
             }
-        }
+
+        state[name] = value
 
         # nest the process in the composite at the given path
-        self.composite.merge({}, state, path)
+        self.composite.merge(schema, state, path)
         self.composite.build_step_network()
 
     def set_value(self,
@@ -763,6 +773,6 @@ def test_load_vivarium():
 
 
 if __name__ == "__main__":
-    test_vivarium()
-    # test_build_vivarium()
+    # test_vivarium()
+    test_build_vivarium()
     # test_load_vivarium()
