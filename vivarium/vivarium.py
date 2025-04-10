@@ -396,16 +396,17 @@ class Vivarium:
             self.composite.state,
             path)
 
-        self.composite.emitter_paths[path] = instance
+        # self.composite.emitter_paths[path] = instance
         self.composite.step_paths[path] = instance
 
         # rebuild the step network
         self.composite.build_step_network()
 
     def reset_emitters(self):
-        for path, emitter in self.composite.emitter_paths.items():
-            remove_path(self.composite.state, path)
-            self.add_emitter()
+        for path, instance in self.composite.step_paths.items():
+            if "emitter" in path:
+                remove_path(self.composite.state, path)
+                self.add_emitter()
 
     def get_results(self,
                     query=None,
