@@ -1,6 +1,9 @@
 name: Run Pytest
 
 on:
+  push:
+    branches:
+      - '**'
   pull_request:
     branches:
       - main

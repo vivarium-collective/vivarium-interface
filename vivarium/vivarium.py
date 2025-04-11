@@ -421,11 +421,12 @@ class Vivarium:
             if 'global_time' not in query:
                 query.append(('global_time',))
 
-        emitter_paths = list(self.composite.emitter_paths.keys())
+        step_paths = list(self.composite.step_paths.keys())
         results = []
-        for path in emitter_paths:
-            emitter = get_path(self.composite.state, path)
-            results.extend(emitter['instance'].query(query))
+        for path in step_paths:
+            if "emitter" in path:
+                emitter = get_path(self.composite.state, path)
+                results.extend(emitter['instance'].query(query))
 
         return round_floats(results, significant_digits=significant_digits)
 
