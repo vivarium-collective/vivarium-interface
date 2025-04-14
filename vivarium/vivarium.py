@@ -396,16 +396,17 @@ class Vivarium:
             self.composite.state,
             path)
 
-        self.composite.emitter_paths[path] = instance
+        # self.composite.emitter_paths[path] = instance
         self.composite.step_paths[path] = instance
 
         # rebuild the step network
         self.composite.build_step_network()
 
     def reset_emitters(self):
-        for path, emitter in self.composite.emitter_paths.items():
-            remove_path(self.composite.state, path)
-            self.add_emitter()
+        for path, instance in self.composite.step_paths.items():
+            if "emitter" in path:
+                remove_path(self.composite.state, path)
+                self.add_emitter()
 
     def get_results(self,
                     query=None,
@@ -420,11 +421,12 @@ class Vivarium:
             if 'global_time' not in query:
                 query.append(('global_time',))
 
-        emitter_paths = list(self.composite.emitter_paths.keys())
+        step_paths = list(self.composite.step_paths.keys())
         results = []
-        for path in emitter_paths:
-            emitter = get_path(self.composite.state, path)
-            results.extend(emitter['instance'].query(query))
+        for path in step_paths:
+            if "emitter" in path:
+                emitter = get_path(self.composite.state, path)
+                results.extend(emitter['instance'].query(query))
 
         return round_floats(results, significant_digits=significant_digits)
 
@@ -602,7 +604,7 @@ def test_vivarium():
     sim.diagram(filename="pre_simulation", out_dir="out")
 
     # run simulation
-    sim.run(interval=40.0)
+    sim.run(11)
     results = sim.get_timeseries()
     print(results)
 
@@ -637,7 +639,7 @@ def test_build_vivarium():
     timeseries = v.get_timeseries()
     print(timeseries)
     # plot the timeseries
-    fig1 = v.plot_timeseries(show=False)
+    fig1 = v.plot_timeseries()
 
     # add another process and run again
     v.add_object(name='AA', path=['top'], value=1)
@@ -664,7 +666,7 @@ def test_build_vivarium():
     # run the simulation for 10 time units
     v.set_value(path=['global_time'], value=0)
     v.run(interval=10)
-    fig2 = v.plot_timeseries(show=False)
+    fig2 = v.plot_timeseries()
 
 
 def test_load_vivarium():

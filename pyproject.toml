@@ -1,0 +1,21 @@
+[project]
+name = "vivarium-interface"
+version = "0.0.4"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "process-bigraph",
+    "bigraph-viz",
+    "pandas",
+    "IPython",
+    "matplotlib",
+    "graphviz"
+]
+
+[build-system]
+requires = [
+    "setuptools",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"

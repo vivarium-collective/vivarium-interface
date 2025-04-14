@@ -2,7 +2,7 @@ import re
 from setuptools import setup, find_packages
 
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 
 with open("README.md", "r") as readme:
@@ -43,8 +43,8 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "process-bigraph>=0.0.25",
-        "bigraph-viz>=0.1.3",
+        "process-bigraph",
+        "bigraph-viz",
         "pandas",
         "IPython",
         "matplotlib",
