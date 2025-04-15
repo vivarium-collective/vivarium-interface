@@ -459,7 +459,7 @@ class Vivarium:
             append_to_timeseries(timeseries, state)
 
         # Convert tuple keys to string keys for better readability
-        timeseries = {".".join(key): value for key, value in timeseries.items()}
+        timeseries = {"/" + "/".join(str(k) for k in key): value for key, value in timeseries.items()}
 
         # Convert the timeseries dictionary to a pandas DataFrame
         df = pd.DataFrame(timeseries)
@@ -484,7 +484,7 @@ class Vivarium:
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
         timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
-        time = timeseries.pop('global_time')
+        time = timeseries.pop('/global_time')
 
         if combined_vars is None:
             combined_vars = []
