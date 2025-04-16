@@ -98,6 +98,39 @@ def get_type_label(value):
         print(f"Warning: {value} is not a recognized type, returning {type(value)}.")
         return type(value)
 
+def pad_to_length(data, length):
+    """Prepend zeros to data if it's shorter than length."""
+    if len(data) < length:
+        return [0] * (length - len(data)) + data
+    return data
+
+def flatten_timeseries_to_scalar_paths(timeseries):
+    """
+    Converts timeseries with multi-dimensional arrays into a flat dict where each key is a scalar path.
+
+    Example:
+        {'/fields/glucose': [array([[1],[2]]), array([[3],[4]])]}
+    becomes:
+        {'/fields/glucose/0/0': [1, 3], '/fields/glucose/1/0': [2, 4]}
+    """
+    flat_timeseries = {}
+    for var, series in timeseries.items():
+        # Skip time for now; handle it separately
+        if var in ['global_time', '/global_time']:
+            flat_timeseries[var] = series
+            continue
+
+        first = series[0]
+        if isinstance(first, np.ndarray) and first.ndim >= 1:
+            for idx in np.ndindex(first.shape):
+                path = f"{var}" + "".join(f"/{i}" for i in idx)
+                flat_timeseries[path] = [arr[idx].item() for arr in series]
+        else:
+            # Already scalar/1D
+            flat_timeseries[var] = series
+
+    return flat_timeseries
+
 
 class Vivarium:
     """
@@ -598,7 +631,8 @@ class Vivarium:
                         combined_vars=None
                         ):
         """
-        Plots the timeseries data for all variables using matplotlib, each variable in its own subplot.
+        Plots the timeseries data for all variables using matplotlib.
+        Each variable (or group of variables) gets its own subplot.
 
         Args:
             query (dict, optional): Queries to retrieve specific data from the emitter.
@@ -608,7 +642,9 @@ class Vivarium:
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
         timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
-        # get either global_time or /global_time
+        timeseries = flatten_timeseries_to_scalar_paths(timeseries)
+
+        # Extract time vector
         if 'global_time' in timeseries:
             time = timeseries.pop('global_time')
         elif '/global_time' in timeseries:
@@ -619,41 +655,39 @@ class Vivarium:
         if combined_vars is None:
             combined_vars = []
 
-        # Flatten combined_vars and remove duplicates
-        combined_vars_flat = [var for sublist in combined_vars for var in sublist]
-        combined_vars_flat = list(set(combined_vars_flat))
-
-        # Variables not in combined_vars
+        # Determine individual vars
+        combined_vars_flat = set(var for group in combined_vars for var in group)
         individual_vars = [var for var in timeseries if var not in combined_vars_flat]
 
-        # Total number of subplots
-        num_vars = len(individual_vars) + len(combined_vars)
-        nrows = (num_vars + ncols - 1) // ncols
-
+        total_plots = len(individual_vars) + len(combined_vars)
+        nrows = (total_plots + ncols - 1) // ncols
         fig, axes = plt.subplots(nrows, ncols, figsize=(subplot_size[0] * ncols, subplot_size[1] * nrows))
-        axes = axes.flatten() if num_vars > 1 else [axes]
+        axes = axes.flatten() if total_plots > 1 else [axes]
+        plot_idx = 0
 
         # Plot individual variables
-        for ax, var in zip(axes, individual_vars):
-            data = timeseries[var]
-            if len(data) < len(time):
-                data = [0] * (len(time) - len(data)) + data
+        for var in individual_vars:
+            ax = axes[plot_idx]
+            data = pad_to_length(timeseries[var], len(time))
             ax.plot(time, data)
             ax.set_title(var)
             ax.set_xlabel('Time')
             ax.set_ylabel('Value')
+            plot_idx += 1
 
-        # Plot combined variables
-        for ax, vars in zip(axes[len(individual_vars):], combined_vars):
-            for var in vars:
-                data = timeseries[var]
-                if len(data) < len(time):
-                    data = [0] * (len(time) - len(data)) + data
+        # Plot combined variable groups
+        for group in combined_vars:
+            ax = axes[plot_idx]
+            for var in group:
+                if var not in timeseries:
+                    raise KeyError(f"Variable '{var}' not found in timeseries")
+                data = pad_to_length(timeseries[var], len(time))
                 ax.plot(time, data, label=var)
-            ax.set_title(', '.join(vars))
+            ax.set_title(', '.join(group))
             ax.set_xlabel('Time')
             ax.set_ylabel('Value')
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plot_idx += 1
 
         plt.tight_layout()
         plt.close(fig)
