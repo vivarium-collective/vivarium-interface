@@ -493,7 +493,7 @@ class Vivarium:
         emitter_paths = list(self.emitter_paths.keys())
 #         step_paths = list(self.composite.step_paths.keys())
         results = []
-        for path in step_paths:
+        for path in emitter_paths:
             if "emitter" in path:
                 emitter = get_path(self.composite.state, path)
                 results.extend(emitter['instance'].query(query))
