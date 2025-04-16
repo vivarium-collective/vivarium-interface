@@ -5,6 +5,7 @@ import os
 import inspect
 from IPython.display import display, Image
 import json
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -301,12 +302,29 @@ class Vivarium:
             print("Warning: register_types() should be called with a dictionary of types.")
 
     def process_schema(self, process_id, string_representation=False):
+        warnings.warn(
+            "process_schema() is deprecated and will be removed in a future release. "
+            "Use process_config() instead.",
+            category=DeprecationWarning,
+            stacklevel=2
+        )
+        
+    def process_config(
+            self, 
+            process_id, 
+            dataclass=False, 
+            string_representation=False
+    ):
         """
         Get the config schema for a process.
         """
+        assert isinstance(process_id, str), "process_id must be a string"
+        assert not (dataclass and string_representation), "dataclass and string_representation cannot be both True"
         try:
             process = self.core.process_registry.access(process_id)
-            if string_representation:
+            if dataclass:
+                return self.core.dataclass(process.config_schema)
+            elif string_representation:
                 return self.core.representation(process.config_schema)
             else:
                 return process.config_schema
