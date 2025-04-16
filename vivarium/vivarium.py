@@ -5,6 +5,8 @@ import os
 import inspect
 from IPython.display import display, Image
 import json
+
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -36,6 +38,51 @@ class VivariumTypes(ProcessTypes, VisualizeTypes):
         super().__init__()
 
 
+def parse_path(path):
+    if isinstance(path, dict):
+        return {
+            key: parse_path(value)
+            for key, value in path.items()}
+    elif isinstance(path, str):
+        if path.startswith('/'):
+            return path.split('/')[1:]
+        else:
+            return [path]
+    else:
+        return path
+
+
+def render_path(path):
+    if isinstance(path, dict):
+        return {
+            key: render_path(value)
+            for key, value in path.items()}
+    elif isinstance(path, str):
+        if path.startswith('/'):
+            return path
+        else:
+            return '/' + path
+    elif isinstance(path, (tuple, list)):
+        strpath = [str(x) for x in path]
+        return '/' + '/'.join(strpath)
+    else:
+        return path
+
+
+def render_type(type, core):
+    type = core.access(type)
+    rendered = {}
+    for key, value in type.items():
+        if is_schema_key(key):
+            if key == '_description':
+                rendered['description'] = value
+            elif key == '_default':
+                rendered['default'] = core.default(type)
+        elif isinstance(value, dict):
+            rendered[key] = render_type(value, core)
+    return rendered
+
+
 class Vivarium:
     """
     Vivarium is a controlled virtual environment for composite process-bigraph simulations.
@@ -64,6 +111,7 @@ class Vivarium:
         types = types or {}
         self.emitter_config = emitter_config or {"mode": "all",
                                                  "path": ("emitter",)}
+        self.emitter_paths = {}
 
         # if no core is provided, create a new one
         self.core = VivariumTypes()
@@ -124,21 +172,29 @@ class Vivarium:
                    path=None,
                    value=None
                    ):
-        state = {
-            name: {
-                "_type": type or 'any',
-                "_value": value
+        state = {}
+        schema = {}
+        if isinstance(value, np.ndarray):
+            type = "array"
+            shape = value.shape
+            data = "float"  # TODO -- make this a parameter
+            schema[name] = {
+                '_type': type,
+                '_shape': shape,
+                '_data': data,
             }
-        }
+
+        state[name] = value
 
         # nest the process in the composite at the given path
-        self.composite.merge({}, state, path)
+        self.composite.merge(schema, state, path)
         self.composite.build_step_network()
 
     def set_value(self,
                   path,
                   value
                   ):
+        path = parse_path(path)
         self.composite.merge({}, value, path)
 
     def get_value(self, path):
@@ -158,6 +214,12 @@ class Vivarium:
         outputs = outputs or {}
         path = path or ()
 
+        # convert string paths to lists
+        # TODO -- make this into a separate path-parsing function
+        for ports in [inputs, outputs]:
+            for port, port_path in ports.items():
+                ports[port] = parse_path(port_path)
+
         # make the process spec
         state = {
             name: {
@@ -166,8 +228,6 @@ class Vivarium:
                 "config": config,
                 "inputs": inputs,
                 "outputs": outputs,
-                # "_inputs": {},
-                # "_outputs": {},
             }
         }
 
@@ -211,7 +271,7 @@ class Vivarium:
         """
         Generates a new composite from a document.
         """
-        document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
+        # document["state"] = self.core.deserialize(document.get("composition", {}), document["state"])
         composite = Composite(
             document,
             core=self.core)
@@ -259,6 +319,8 @@ class Vivarium:
         process_class = self.core.process_registry.access(process_id)
         process_instance = process_class(config, self.core)
         interface = process_instance.interface()
+        interface = self.core.access(interface)
+        interface = render_type(interface, self.core)
 
         # Add function names to the inputs and outputs
         inputs_df = pd.DataFrame.from_dict(interface['inputs'], orient='index')
@@ -291,6 +353,7 @@ class Vivarium:
 
     def get_type(self, type_id):
         type_info = self.core.access(type_id)
+        type_info = render_type(type_info, self.core)
         return pd.DataFrame(list(type_info.items()), columns=['Attribute', 'Value'])
 
     def make_document(self):
@@ -332,6 +395,9 @@ class Vivarium:
         """
         Run the simulation for a given interval.
         """
+        if not self.emitter_paths:
+            self.add_emitter()
+
         self.composite.run(interval)
 
     def step(self):
@@ -396,17 +462,20 @@ class Vivarium:
             self.composite.state,
             path)
 
-        # self.composite.emitter_paths[path] = instance
+        self.emitter_paths[path] = instance
         self.composite.step_paths[path] = instance
 
         # rebuild the step network
         self.composite.build_step_network()
 
     def reset_emitters(self):
-        for path, instance in self.composite.step_paths.items():
-            if "emitter" in path:
-                remove_path(self.composite.state, path)
-                self.add_emitter()
+        for path, emitter in self.emitter_paths.items():
+            remove_path(self.composite.state, path)
+            self.add_emitter()
+#         for path, instance in self.composite.step_paths.items():
+#             if "emitter" in path:
+#                 remove_path(self.composite.state, path)
+#                 self.add_emitter()
 
     def get_results(self,
                     query=None,
@@ -421,9 +490,10 @@ class Vivarium:
             if 'global_time' not in query:
                 query.append(('global_time',))
 
-        step_paths = list(self.composite.step_paths.keys())
+        emitter_paths = list(self.emitter_paths.keys())
+#         step_paths = list(self.composite.step_paths.keys())
         results = []
-        for path in step_paths:
+        for path in emitter_paths:
             if "emitter" in path:
                 emitter = get_path(self.composite.state, path)
                 results.extend(emitter['instance'].query(query))
@@ -459,12 +529,14 @@ class Vivarium:
             append_to_timeseries(timeseries, state)
 
         # Convert tuple keys to string keys for better readability
-        timeseries = {"/" + "/".join(str(k) for k in key): value for key, value in timeseries.items()}
+        timeseries = {render_path(key): value for key, value in timeseries.items()}
 
         # Convert the timeseries dictionary to a pandas DataFrame
-        df = pd.DataFrame(timeseries)
+        results = pd.DataFrame.from_dict(timeseries, orient='index')
+        results = results.transpose()
+        return results
+        # return pd.DataFrame(timeseries)
 
-        return df
 
     def plot_timeseries(self,
                         query=None,
@@ -484,7 +556,13 @@ class Vivarium:
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
         timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
-        time = timeseries.pop('/global_time')
+        # get either global_time or /global_time
+        if 'global_time' in timeseries:
+            time = timeseries.pop('global_time')
+        elif '/global_time' in timeseries:
+            time = timeseries.pop('/global_time')
+        else:
+            raise KeyError("Neither 'global_time' nor '/global_time' found in timeseries.")
 
         if combined_vars is None:
             combined_vars = []
@@ -593,9 +671,14 @@ def test_vivarium():
                 "mass": initial_mass,
                 "grow_divide": grow_divide}}}
 
-    document = {"state": environment}
+    document = {
+        "state": environment,
+        'bridge': {
+            'inputs': {
+                'environment': ['environment']}}}
 
     sim = Vivarium(document=document, processes=TOY_PROCESSES)
+
     sim.add_emitter()
 
     # test navigating the state
@@ -695,6 +778,6 @@ def test_load_vivarium():
 
 
 if __name__ == "__main__":
-    test_vivarium()
+    # test_vivarium()
     test_build_vivarium()
-    test_load_vivarium()
+    # test_load_vivarium()
