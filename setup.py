@@ -48,6 +48,8 @@ setup(
         "pandas",
         "IPython",
         "matplotlib",
+        "imageio",
         "graphviz",
+        "numpy",
     ]
 )
