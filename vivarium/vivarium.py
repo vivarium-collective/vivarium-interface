@@ -300,13 +300,16 @@ class Vivarium:
         else:
             print("Warning: register_types() should be called with a dictionary of types.")
 
-    def process_schema(self, process_id):
+    def process_schema(self, process_id, string_representation=False):
         """
         Get the config schema for a process.
         """
         try:
             process = self.core.process_registry.access(process_id)
-            return self.core.representation(process.config_schema)
+            if string_representation:
+                return self.core.representation(process.config_schema)
+            else:
+                return process.config_schema
         except KeyError as e:
             print(f"Error finding process {process_id}: {e}")
             return None
@@ -334,16 +337,22 @@ class Vivarium:
         """
         print(self.core.process_registry.list())
 
-    def get_processes(self):
+    def get_processes(self, as_dataframe=False):
         """
         Print the list of registered processes.
         """
         processes = self.core.process_registry.list()
-        return pd.DataFrame(processes, columns=['Process'])
+        if as_dataframe:
+            return pd.DataFrame(processes, columns=['Process'])
+        else:
+            return processes
 
-    def get_types(self):
+    def get_types(self, as_dataframe=False):
         types = self.core.list()
-        return pd.DataFrame(types, columns=['Type'])
+        if as_dataframe:
+            return pd.DataFrame(types, columns=['Type'])
+        else:
+            return types
 
     def print_types(self):
         """
@@ -502,7 +511,8 @@ class Vivarium:
 
     def get_timeseries(self,
                        query=None,
-                       significant_digits=None
+                       significant_digits=None,
+                       as_dataframe=False,
                        ):
         """
         Gets the results and converts them to timeseries format
@@ -532,10 +542,11 @@ class Vivarium:
         timeseries = {render_path(key): value for key, value in timeseries.items()}
 
         # Convert the timeseries dictionary to a pandas DataFrame
-        results = pd.DataFrame.from_dict(timeseries, orient='index')
-        results = results.transpose()
-        return results
-        # return pd.DataFrame(timeseries)
+        if as_dataframe:
+            timeseries = pd.DataFrame.from_dict(timeseries, orient='index')
+            timeseries = timeseries.transpose()
+            
+        return timeseries
 
 
     def plot_timeseries(self,
