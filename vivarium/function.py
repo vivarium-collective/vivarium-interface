@@ -1,3 +1,7 @@
+"""
+This is an experimental module for creating function-based steps in a process-bigraph simulation.
+"""
+
 from process_bigraph import Step
 
 def register_step(input_types, output_types, config_schema):
