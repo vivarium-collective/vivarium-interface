@@ -472,6 +472,10 @@ class Vivarium:
         for path, emitter in self.emitter_paths.items():
             remove_path(self.composite.state, path)
             self.add_emitter()
+#         for path, instance in self.composite.step_paths.items():
+#             if "emitter" in path:
+#                 remove_path(self.composite.state, path)
+#                 self.add_emitter()
 
     def get_results(self,
                     query=None,
@@ -487,10 +491,12 @@ class Vivarium:
                 query.append(('global_time',))
 
         emitter_paths = list(self.emitter_paths.keys())
+#         step_paths = list(self.composite.step_paths.keys())
         results = []
-        for path in emitter_paths:
-            emitter = get_path(self.composite.state, path)
-            results.extend(emitter['instance'].query(query))
+        for path in step_paths:
+            if "emitter" in path:
+                emitter = get_path(self.composite.state, path)
+                results.extend(emitter['instance'].query(query))
 
         return round_floats(results, significant_digits=significant_digits)
 
@@ -550,7 +556,6 @@ class Vivarium:
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
         timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
-
         # get either global_time or /global_time
         if 'global_time' in timeseries:
             time = timeseries.pop('global_time')
@@ -682,7 +687,7 @@ def test_vivarium():
     sim.diagram(filename="pre_simulation", out_dir="out")
 
     # run simulation
-    sim.run(interval=40.0)
+    sim.run(11)
     results = sim.get_timeseries()
     print(results)
 
