@@ -83,6 +83,21 @@ def render_type(type, core):
             rendered[key] = render_type(value, core)
     return rendered
 
+def get_type_label(value):
+    if isinstance(value, int):
+        return 'integer'
+    elif isinstance(value, float):
+        return 'float'
+    elif isinstance(value, str):
+        return 'string'
+    elif isinstance(value, list):
+        return 'list'
+    elif isinstance(value, np.ndarray):
+        return 'array'
+    else:
+        print(f"Warning: {value} is not a recognized type, returning {type(value)}.")
+        return type(value)
+
 
 class Vivarium:
     """
@@ -173,17 +188,25 @@ class Vivarium:
                    path=None,
                    value=None
                    ):
+        type = type or get_type_label(value)
+
         state = {}
         schema = {}
-        if isinstance(value, np.ndarray):
-            type = "array"
+        if type == "array":
             shape = value.shape
-            data = "float"  # TODO -- make this a parameter
+            # get the datatype of the array
+            element_type = get_type_label(value.flat[0])
             schema[name] = {
                 '_type': type,
                 '_shape': shape,
-                '_data': data,
+                '_data': element_type,
             }
+        else:
+            schema[name] = {
+                '_type': type,
+                # '_default': value,
+            }
+
 
         state[name] = value
 
