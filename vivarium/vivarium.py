@@ -2,8 +2,11 @@
 Vivarium is a simulation environment that runs composites in the process bigraph.
 """
 import os
+import io
+import base64
+import imageio
 import inspect
-from IPython.display import display, Image
+from IPython.display import HTML, display, Image
 import json
 import warnings
 
@@ -254,8 +257,24 @@ class Vivarium:
         path = parse_path(path)
         self.composite.merge({}, value, path)
 
-    def get_value(self, path):
-        return get_path(self.composite.state, path)
+    def get_value(self, path, as_dataframe=False):
+        value = get_path(self.composite.state, path)
+        if as_dataframe:
+            if isinstance(value, dict):
+                records = []
+                for var, array in value.items():
+                    if isinstance(array, np.ndarray) and array.ndim >= 1:
+                        for idx, val in np.ndenumerate(array):
+                            records.append({
+                                'variable': var,
+                                'index': idx,
+                                'value': val
+                            })
+                return pd.DataFrame.from_records(records)
+            else:
+                return pd.DataFrame(value)  # fallback for 1D cases
+        else:
+            return value
 
     def add_process(self,
                     name,
@@ -693,6 +712,152 @@ class Vivarium:
         plt.close(fig)
         return fig
 
+    def plot_snapshots(self, times=None, n_snapshots=None, query=None):
+        """
+        Plot 2D snapshots of specified fields at specified times.
+
+        Rows = fields; Columns = timepoints.
+
+        Args:
+            times (list of float): List of times at which to take snapshots.
+            n_snapshots (int, optional): Number of equally spaced snapshots. Mutually exclusive with `times`.
+            query (dict, optional): Query to pass to `get_timeseries()` to filter data.
+        """
+        if (times is not None) and (n_snapshots is not None):
+            raise ValueError("Specify either `times` or `n_snapshots`, not both.")
+
+        timeseries = self.get_timeseries(query=query)
+
+        # Extract time vector
+        if 'global_time' in timeseries:
+            time = timeseries.pop('global_time')
+        elif '/global_time' in timeseries:
+            time = timeseries.pop('/global_time')
+        else:
+            raise KeyError("Neither 'global_time' nor '/global_time' found in timeseries.")
+
+        # Validate structure
+        if not isinstance(timeseries, dict):
+            raise TypeError("Timeseries must be a dict.")
+        for key, series in timeseries.items():
+            if not isinstance(series, list) or not all(isinstance(arr, np.ndarray) for arr in series):
+                raise TypeError(f"Expected a list of NumPy arrays for field '{key}', got: {type(series)}")
+
+        # Determine timepoints
+        if times is not None:
+            time_indices = [np.argmin(np.abs(np.array(time) - t)) for t in times]
+            display_times = [time[i] for i in time_indices]
+        elif n_snapshots is not None:
+            total_steps = len(time)
+            time_indices = np.linspace(0, total_steps - 1, n_snapshots, dtype=int)
+            display_times = [time[i] for i in time_indices]
+        else:
+            raise ValueError("You must specify either `times` or `n_snapshots`.")
+
+        field_names = list(timeseries.keys())
+        num_rows = len(field_names)  # Fields = rows
+        num_cols = len(display_times)  # Timepoints = columns
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(5 * num_cols, 5 * num_rows))
+
+        # Normalize axes indexing
+        if num_rows == 1 and num_cols == 1:
+            axes = np.array([[axes]])
+        elif num_rows == 1:
+            axes = np.array([axes])
+        elif num_cols == 1:
+            axes = np.array([[ax] for ax in axes])
+
+        # Compute global min/max per field
+        global_min_max = {}
+        for field in field_names:
+            all_data = timeseries[field]
+            flat = np.concatenate([arr.flatten() for arr in all_data])
+            global_min_max[field] = (np.min(flat), np.max(flat))
+
+        for row, field in enumerate(field_names):
+            for col, time_idx in enumerate(time_indices):
+                ax = axes[row, col]
+                if field not in timeseries:
+                    ax.set_title(f"{field} not found")
+                    continue
+
+                snapshot = timeseries[field][time_idx]
+                im = ax.imshow(snapshot, cmap='viridis', aspect='auto',
+                               vmin=global_min_max[field][0], vmax=global_min_max[field][1])
+                ax.set_title(f"{field} at t={time[time_idx]:.2f}")
+                plt.colorbar(im, ax=ax)
+
+        plt.tight_layout()
+        plt.show()
+
+    def show_video(self, query=None, skip_frames=1, title=''):
+        """
+        Generate and display a GIF showing 2D field evolution over time.
+
+        Args:
+            query (dict, optional): Filter to apply in get_timeseries().
+            skip_frames (int, optional): Interval of timepoints to skip between frames. Default is 1.
+            title (str, optional): Title displayed on top of the animation.
+        """
+        timeseries = self.get_timeseries(query=query)
+
+        # Extract and remove time
+        if 'global_time' in timeseries:
+            time = timeseries.pop('global_time')
+        elif '/global_time' in timeseries:
+            time = timeseries.pop('/global_time')
+        else:
+            raise KeyError("Neither 'global_time' nor '/global_time' found in timeseries.")
+
+        # Validate structure
+        if not isinstance(timeseries, dict):
+            raise TypeError("Expected a dict of field -> list of numpy arrays")
+        for field, series in timeseries.items():
+            if not isinstance(series, list) or not all(isinstance(arr, np.ndarray) for arr in series):
+                raise TypeError(f"Field '{field}' must be a list of NumPy arrays")
+
+        field_names = list(timeseries.keys())
+        n_fields = len(field_names)
+        n_frames = len(time)
+
+        # Compute global min/max per field
+        global_min_max = {
+            field: (
+                np.min(np.concatenate([arr.flatten() for arr in timeseries[field]])),
+                np.max(np.concatenate([arr.flatten() for arr in timeseries[field]]))
+            )
+            for field in field_names
+        }
+
+        images = []
+        for i in range(0, n_frames, skip_frames):
+            fig, axs = plt.subplots(1, n_fields, figsize=(5 * n_fields, 4))
+            axs = [axs] if n_fields == 1 else axs
+
+            for j, field in enumerate(field_names):
+                ax = axs[j]
+                vmin, vmax = global_min_max[field]
+                img = ax.imshow(timeseries[field][i], interpolation='nearest', vmin=vmin, vmax=vmax, cmap='viridis')
+                ax.set_title(f'{field} at t = {time[i]:.2f}')
+                plt.colorbar(img, ax=ax)
+
+            fig.suptitle(title, fontsize=16)
+            plt.tight_layout(pad=0.3)
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=120)
+            buf.seek(0)
+            images.append(imageio.imread(buf))
+            buf.close()
+            plt.close(fig)
+
+        # Save GIF in memory and display
+        buf = io.BytesIO()
+        imageio.mimsave(buf, images, format='GIF', duration=0.5, loop=0)
+        buf.seek(0)
+        data_url = 'data:image/gif;base64,' + base64.b64encode(buf.read()).decode()
+        display(HTML(f'<img src="{data_url}" alt="{title}" style="max-width:100%;"/>'))
+        
     def diagram(self,
                 filename=None,
                 out_dir=None,
