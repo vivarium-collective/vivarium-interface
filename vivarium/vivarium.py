@@ -598,8 +598,14 @@ class Vivarium:
         results = []
         for path in emitter_paths:
             if "emitter" in path:
-                emitter = get_path(self.composite.state, path)
-                results.extend(emitter['instance'].query(query))
+                # emitter = get_path(self.composite.state, path)
+                _, emitter = self.core.slice(
+                    schema=self.composite.composition, 
+                    state=self.composite.state,
+                    path=path
+                )
+                schema = self.composite.composition  # TODO -- this only works if the emitter is at the root, make it more general
+                results.extend(emitter['instance'].query(query, schema))
 
         return round_floats(results, significant_digits=significant_digits)
 
