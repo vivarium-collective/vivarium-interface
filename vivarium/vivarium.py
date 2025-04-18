@@ -12,6 +12,7 @@ import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import pandas as pd
 
 # process bigraph imports
@@ -587,8 +588,8 @@ class Vivarium:
         retrieves results from the emitter
         """
         if query:
-            # parse each query in the list from 'top.A' to ('top', 'A')
-            query = [tuple(q.split('.')) for q in query]
+            # parse each query in the list from '/top/A' to ('top', 'A')
+            query = [tuple(q.lstrip('/').split('/')) for q in query]
             if 'global_time' not in query:
                 query.append(('global_time',))
 
@@ -715,7 +716,6 @@ class Vivarium:
     def plot_snapshots(self, times=None, n_snapshots=None, query=None):
         """
         Plot 2D snapshots of specified fields at specified times.
-
         Rows = fields; Columns = timepoints.
 
         Args:
@@ -755,9 +755,13 @@ class Vivarium:
             raise ValueError("You must specify either `times` or `n_snapshots`.")
 
         field_names = list(timeseries.keys())
-        num_rows = len(field_names)  # Fields = rows
-        num_cols = len(display_times)  # Timepoints = columns
-        fig, axes = plt.subplots(num_rows, num_cols, figsize=(5 * num_cols, 5 * num_rows))
+        num_rows = len(field_names)
+        num_cols = len(display_times)
+        fig, axes = plt.subplots(
+            num_rows, num_cols,
+            figsize=(5 * num_cols, 5 * num_rows),
+            gridspec_kw={'wspace': 0.1}
+        )
 
         # Normalize axes indexing
         if num_rows == 1 and num_cols == 1:
@@ -775,6 +779,7 @@ class Vivarium:
             global_min_max[field] = (np.min(flat), np.max(flat))
 
         for row, field in enumerate(field_names):
+            first_im = None
             for col, time_idx in enumerate(time_indices):
                 ax = axes[row, col]
                 if field not in timeseries:
@@ -785,9 +790,19 @@ class Vivarium:
                 im = ax.imshow(snapshot, cmap='viridis', aspect='auto',
                                vmin=global_min_max[field][0], vmax=global_min_max[field][1])
                 ax.set_title(f"{field} at t={time[time_idx]:.2f}")
-                plt.colorbar(im, ax=ax)
+                if col == 0:
+                    first_im = im
 
-        plt.tight_layout()
+            # Add one colorbar on the left of the row
+            cbar_ax = fig.add_axes([
+                axes[row, 0].get_position().x0 - 0.075,  # x-position
+                axes[row, 0].get_position().y0,  # y-position
+                0.015,  # width
+                axes[row, 0].get_position().height  # height
+            ])
+            fig.colorbar(first_im, cax=cbar_ax)
+
+        # plt.tight_layout()
         plt.show()
 
     def show_video(self, query=None, skip_frames=1, title=''):
@@ -887,9 +902,9 @@ class Vivarium:
             k: v for k, v in kwargs.items()
             if k not in get_graphviz_kwargs}
 
-        # convert list of paths in 'top.A' format to tuple of paths in ('top', 'A') format
+        # convert list of paths in 'top/A' format to tuple of paths in ('top', 'A') format
         remove_nodes = remove_nodes or []
-        remove_nodes = [tuple(node.split('.')) if isinstance(node, str) else node for node in remove_nodes]
+        remove_nodes = [tuple(node.lstrip('/').split('/')) if isinstance(node, str) else node for node in remove_nodes]
         viztype_kwargs['remove_nodes'] = remove_nodes
 
         # generate the graph dict
