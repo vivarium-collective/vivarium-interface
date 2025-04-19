@@ -25,15 +25,17 @@ from bigraph_viz import VisualizeTypes
 from bigraph_viz.visualize_types import get_graphviz_fig
 
 
-def round_floats(data, significant_digits):
-    if not significant_digits:
+def round_floats(data, decimal_places):
+    if not decimal_places:
         return data
     if isinstance(data, dict):
-        return {k: round_floats(v, significant_digits) for k, v in data.items()}
+        return {k: round_floats(v, decimal_places) for k, v in data.items()}
     elif isinstance(data, list):
-        return [round_floats(i, significant_digits) for i in data]
+        return [round_floats(i, decimal_places) for i in data]
     elif isinstance(data, float):
-        return round(data, significant_digits)
+        return round(data, decimal_places)
+    elif isinstance(data, np.ndarray):
+        return np.round(data, decimals=decimal_places)
     else:
         return data
 
@@ -449,19 +451,24 @@ class Vivarium:
             self, 
             process_id, 
             dataclass=False, 
-            string_representation=False
+            string_representation=False,
+            default=False,
     ):
         """
         Get the config schema for a process.
         """
         assert isinstance(process_id, str), "process_id must be a string"
-        assert not (dataclass and string_representation), "dataclass and string_representation cannot be both True"
+        assert sum([dataclass, string_representation, default]) <= 1, \
+            "Only one of dataclass, string_representation, or default may be True"
+
         try:
             process = self.core.process_registry.access(process_id)
             if dataclass:
                 return self.core.dataclass(process.config_schema)
             elif string_representation:
                 return self.core.representation(process.config_schema)
+            elif default:
+                return self.core.default(process.config_schema)
             else:
                 return process.config_schema
         except KeyError as e:
@@ -642,7 +649,7 @@ class Vivarium:
 
     def get_results(self,
                     query=None,
-                    significant_digits=None
+                    decimal_places=None
                     ):
         """
         retrieves results from the emitter
@@ -667,11 +674,11 @@ class Vivarium:
                 schema = self.composite.composition  # TODO -- this only works if the emitter is at the root, make it more general
                 results.extend(emitter['instance'].query(query, schema))
 
-        return round_floats(results, significant_digits=significant_digits)
+        return round_floats(results, decimal_places=decimal_places)
 
     def get_timeseries(self,
                        query=None,
-                       significant_digits=None,
+                       decimal_places=None,
                        as_dataframe=False,
                        ):
         """
@@ -679,7 +686,7 @@ class Vivarium:
         """
 
         emitter_results = self.get_results(query=query,
-                                           significant_digits=significant_digits)
+                                           decimal_places=decimal_places)
 
         def append_to_timeseries(timeseries, state, path=()):
             if isinstance(state, dict):
@@ -711,7 +718,7 @@ class Vivarium:
 
     def plot_timeseries(self,
                         query=None,
-                        significant_digits=None,
+                        decimal_places=None,
                         subplot_size=(10, 5),
                         ncols=1,
                         combined_vars=None
@@ -722,12 +729,12 @@ class Vivarium:
 
         Args:
             query (dict, optional): Queries to retrieve specific data from the emitter.
-            significant_digits (int, optional): Number of significant digits to round off floats. Default is None.
+            decimal_places (int, optional): Number of significant digits to round off floats. Default is None.
             subplot_size (tuple, optional): Size of each subplot. Default is (10, 5).
             ncols (int, optional): Number of columns in the subplot grid. Default is 1.
             combined_vars (list of lists, optional): Lists of variables to combine into the same subplot. Default is None.
         """
-        timeseries = self.get_timeseries(query=query, significant_digits=significant_digits)
+        timeseries = self.get_timeseries(query=query, decimal_places=decimal_places)
         timeseries = flatten_timeseries_to_scalar_paths(timeseries)
 
         # Extract time vector
@@ -791,6 +798,8 @@ class Vivarium:
         """
         if (times is not None) and (n_snapshots is not None):
             raise ValueError("Specify either `times` or `n_snapshots`, not both.")
+        if (times is None) and (n_snapshots is None):
+            n_snapshots = 5
 
         timeseries = self.get_timeseries(query=query)
 
@@ -853,8 +862,13 @@ class Vivarium:
                     continue
 
                 snapshot = timeseries[field][time_idx]
-                im = ax.imshow(snapshot, cmap='viridis', aspect='equal',
-                               vmin=global_min_max[field][0], vmax=global_min_max[field][1])
+                im = ax.imshow(snapshot,
+                               interpolation='nearest',
+                               vmin=global_min_max[field][0],
+                               vmax=global_min_max[field][1],
+                               aspect='equal',
+                               cmap='viridis')
+
                 ax.set_title(f"{field} at t={time[time_idx]:.2f}")
                 if col == 0:
                     first_im = im
@@ -918,12 +932,18 @@ class Vivarium:
             for j, field in enumerate(field_names):
                 ax = axs[j]
                 vmin, vmax = global_min_max[field]
-                img = ax.imshow(timeseries[field][i], interpolation='nearest', vmin=vmin, vmax=vmax, cmap='viridis')
+                img = ax.imshow(timeseries[field][i],
+                                interpolation='nearest',
+                                vmin=vmin,
+                                vmax=vmax,
+                                cmap='viridis',
+                                aspect='equal'
+                                )
                 ax.set_title(f'{field} at t = {time[i]:.2f}')
                 plt.colorbar(img, ax=ax)
 
             fig.suptitle(title, fontsize=16)
-            plt.tight_layout(pad=0.3)
+            # plt.tight_layout(pad=0.3)
 
             buf = io.BytesIO()
             plt.savefig(buf, format='png', dpi=120)
