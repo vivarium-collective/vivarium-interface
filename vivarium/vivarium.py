@@ -269,6 +269,18 @@ class Vivarium:
         # self.composite[path] = value
         # self.composite.set({}, value, path)
 
+    def set_schema(self,
+                   path,
+                   schema
+                   ):
+        path = parse_path(path)
+        # TODO -- make this set the value in the composite using core
+        # set_path(self.composite.composition, path=path, value=schema)
+        
+        # TODO -- need to regenerate the composition
+        self.composite.merge(schema, self.composite.state, path)
+
+
     def get_value(self, path, as_dataframe=False):
         if isinstance(path, str):
             path = parse_path(path)
@@ -511,8 +523,8 @@ class Vivarium:
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
-        schema = self.core.representation(self.composite.composition)
-        # schema = self.composite.composition
+        # schema = self.core.representation(self.composite.composition)
+        schema = self.composite.composition
 
         return {
             "state": serialized_state,
@@ -841,7 +853,7 @@ class Vivarium:
                     continue
 
                 snapshot = timeseries[field][time_idx]
-                im = ax.imshow(snapshot, cmap='viridis', aspect='auto',
+                im = ax.imshow(snapshot, cmap='viridis', aspect='equal',
                                vmin=global_min_max[field][0], vmax=global_min_max[field][1])
                 ax.set_title(f"{field} at t={time[time_idx]:.2f}")
                 if col == 0:
