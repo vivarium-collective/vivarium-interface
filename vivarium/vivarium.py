@@ -251,14 +251,27 @@ class Vivarium:
         self.composite.merge(schema, state, path)
         self.composite.build_step_network()
 
-    def set_value(self,
+    def merge_value(self,
                   path,
                   value
                   ):
         path = parse_path(path)
         self.composite.merge({}, value, path)
 
+    def set_value(self,
+                  path,
+                  value
+                  ):
+        path = parse_path(path)
+        
+        # TODO -- make this set the value in the composite using core
+        set_path(self.composite.state, path=path, value=value)
+        # self.composite[path] = value
+        # self.composite.set({}, value, path)
+
     def get_value(self, path, as_dataframe=False):
+        if isinstance(path, str):
+            path = parse_path(path)
         value = get_path(self.composite.state, path)
         if as_dataframe:
             if isinstance(value, dict):
@@ -313,22 +326,57 @@ class Vivarium:
         self.reset_emitters()
         self.reset_paths()
 
+    def initialize_process(self,
+                           # name,
+                           path,
+                           config=None
+                           ):
+        config = config or {}
+
+        if isinstance(path, str):
+            path = parse_path(path)
+
+        # assert that the process is already in the composite at the path
+        retrieved = get_path(self.composite.state, path)
+        # assert self.core.inherits_from(retrieved, "edge"), f"Path {path} must contain an edge/process."
+        # TODO -- assert that this is a proess
+        
+        state = retrieved['instance'].initial_state(config)
+        
+        # TODO - need to project this through the edge 
+        # initial = self.core.initialize_edge_state(
+        #     self.composite.composition,
+        #     path,
+        #     retrieved)
+        
+        # TODO -- this is a hack because path points to the process and we need to get relative to its projection
+        top_path = ()
+                
+        # merge this into the composite state
+        self.composite.merge({}, state, top_path)
+        
+
     def connect_process(self,
-                        process_name,
+                        name,
                         inputs=None,
                         outputs=None,
                         path=None
                         ):
         path = path or ()
-        state = {process_name: {}}
-
+        
+        # assert that the process is already in the composite at the path
+        retrieved = get_path(self.composite.state, path)
+        assert name in retrieved, f"Process {name} not found at path {path}."
+              
+        # build the new state with the inputs and outputs
+        state = {name: {}}
         if inputs is not None:
             assert isinstance(inputs, dict), "Inputs must be a dictionary."
-            state[process_name]["inputs"] = inputs
+            state[name]["inputs"] = inputs
 
         if outputs is not None:
             assert isinstance(outputs, dict), "Outputs must be a dictionary."
-            state[process_name]["outputs"] = outputs
+            state[name]["outputs"] = outputs
 
         # nest the process in the composite at the given path
         self.composite.merge({}, state, path)
@@ -892,6 +940,7 @@ class Vivarium:
         Args:
             filename (str, optional): Name of the file to save the diagram. Default is None.
             out_dir (str, optional): Directory to save the diagram. Default is None.
+            remove_nodes (list, optional): List of nodes to remove from the diagram. Default is None.
             remove_emitter (bool, optional): Whether to remove the emitter from the diagram. Default is False.
             **kwargs: Additional keyword arguments for get_graphviz_fig.
         """
@@ -978,7 +1027,7 @@ def test_build_vivarium():
                   )
     # connect the 'increase' process to the state through its inputs and outputs
     v.connect_process(
-        process_name='increase',
+        name='increase',
         inputs={'amount': ['top', 'A']},
         outputs={'amount': ['top', 'A']}
     )
