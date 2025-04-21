@@ -280,7 +280,7 @@ class Vivarium:
         # set_path(self.composite.composition, path=path, value=schema)
         
         # TODO -- need to regenerate the composition
-        self.composite.merge(schema, self.composite.state, path)
+        self.composite.merge(schema, {}, path)
 
 
     def get_value(self, path, as_dataframe=False):
