@@ -530,8 +530,8 @@ class Vivarium:
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
-        # schema = self.core.representation(self.composite.composition)
-        schema = self.composite.composition
+        schema = self.core.representation(self.composite.composition)
+        # schema = self.composite.composition
 
         return {
             "state": serialized_state,
@@ -1131,6 +1131,6 @@ def test_load_vivarium():
 
 
 if __name__ == "__main__":
-    # test_vivarium()
+    test_vivarium()
     test_build_vivarium()
-    # test_load_vivarium()
+    test_load_vivarium()
