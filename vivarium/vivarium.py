@@ -91,7 +91,7 @@ def render_type(type, core):
 
 def get_type_label(value):
     if isinstance(value, int):
-        return 'integer'
+        return 'number'
     elif isinstance(value, float):
         return 'float'
     elif isinstance(value, str):
@@ -530,8 +530,8 @@ class Vivarium:
         serialized_state = self.composite.serialize_state()
 
         # TODO fix RecursionError
-        schema = self.core.representation(self.composite.composition)
-        # schema = self.composite.composition
+        # schema = self.core.representation(self.composite.composition)
+        schema = self.composite.composition
 
         return {
             "state": serialized_state,
