@@ -439,13 +439,14 @@ class Vivarium:
         else:
             print("Warning: register_types() should be called with a dictionary of types.")
 
-    def process_schema(self, process_id, string_representation=False):
-        warnings.warn(
-            "process_schema() is deprecated and will be removed in a future release. "
-            "Use process_config() instead.",
-            category=DeprecationWarning,
-            stacklevel=2
-        )
+    # def process_schema(self, process_id, string_representation=False):
+    #     warnings.warn(
+    #         "process_schema() is deprecated and will be removed in a future release. "
+    #         "Use process_config() instead.",
+    #         category=DeprecationWarning,
+    #         stacklevel=2
+    #     )
+        # self.process_config(process_id, string_representation=string_representation)
         
     def process_config(
             self, 
@@ -531,7 +532,8 @@ class Vivarium:
 
         # TODO fix RecursionError
         # schema = self.core.representation(self.composite.composition)
-        schema = self.composite.composition
+        schema = self.composite.serialize_schema()
+        # schema = self.composite.composition
 
         return {
             "state": serialized_state,
