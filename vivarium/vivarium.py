@@ -274,7 +274,6 @@ class Vivarium:
                   ):
         """directly set the value at the given path in the composite state"""
         path = parse_path(path)
-        # TODO -- make this set the value in the composite using core
         set_path(self.composite.state, path=path, value=value)
 
     def merge_schema(self,
@@ -369,6 +368,7 @@ class Vivarium:
                 
         # merge this into the composite state
         self.composite.merge({}, state, top_path)
+        self.composite.find_instance_paths(self.composite.state)
         
 
     def connect_process(self,
