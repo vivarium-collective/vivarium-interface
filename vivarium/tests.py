@@ -73,7 +73,7 @@ def test_units():
     v = Vivarium(processes=DEMO_PROCESSES)
 
     print(v.get_type('mass'))
-    print(v.process_schema('increase mass'))
+    print(v.process_config('increase mass'))
     print(v.process_interface('increase mass'))
 
     # add a process
@@ -105,7 +105,7 @@ def test_interface():
 
     # print process schema and interface
     print(f'PROCESS SCHEMA: '
-          f'{v.process_schema("increase float")}')
+          f'{v.process_config("increase float")}')
 
     process_config = {'rate': 1}
     print(f'PROCESS INTERFACE: '
