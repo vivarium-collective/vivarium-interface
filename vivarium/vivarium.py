@@ -260,28 +260,28 @@ class Vivarium:
         path = parse_path(path)
         self.composite.merge({}, value, path)
 
+    def apply_value(self,
+                    path,
+                    value,
+                    ):
+        """apply the value at the given path in the composite state"""
+        path = parse_path(path)
+        self.composite.apply(value, path)
+
     def set_value(self,
                   path,
                   value
                   ):
+        """directly set the value at the given path in the composite state"""
         path = parse_path(path)
-        
-        # TODO -- make this set the value in the composite using core
         set_path(self.composite.state, path=path, value=value)
-        # self.composite[path] = value
-        # self.composite.set({}, value, path)
 
-    def set_schema(self,
+    def merge_schema(self,
                    path,
                    schema
                    ):
         path = parse_path(path)
-        # TODO -- make this set the value in the composite using core
-        # set_path(self.composite.composition, path=path, value=schema)
-        
-        # TODO -- need to regenerate the composition
-        self.composite.merge(schema, {}, path)
-
+        self.composite.merge_schema(schema, path)
 
     def get_value(self, path, as_dataframe=False):
         if isinstance(path, str):
@@ -355,7 +355,7 @@ class Vivarium:
         # assert self.core.inherits_from(retrieved, "edge"), f"Path {path} must contain an edge/process."
         # TODO -- assert that this is a proess
         
-        state = retrieved['instance'].initial_state(config)
+        state = retrieved['instance'].generate_state(config)
         
         # TODO - need to project this through the edge 
         # initial = self.core.initialize_edge_state(
@@ -368,6 +368,7 @@ class Vivarium:
                 
         # merge this into the composite state
         self.composite.merge({}, state, top_path)
+        self.composite.find_instance_paths(self.composite.state)
         
 
     def connect_process(self,
