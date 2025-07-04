@@ -221,6 +221,12 @@ class Vivarium:
         path = path or ()
         return self.core.dataclass(schema=self.composite.composition, path=path)
 
+    def dataclass_config(self, process_name):
+        process = self.core.process_registry.access(process_name)
+        config_dataclass = self.core.dataclass(process.config_schema, path=[process_name])
+        defaults = self.core.default(process.config_schema)
+        return config_dataclass(**defaults)
+
     def add_object(self,
                    name,
                    type=None,

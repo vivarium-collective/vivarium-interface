@@ -1,5 +1,6 @@
 
 from bigraph_schema.units import units
+from build.lib.bigraph_schema.type_system import test_dataclass
 from process_bigraph import Process
 from process_bigraph.processes import TOY_PROCESSES
 
@@ -152,8 +153,14 @@ def test_interface():
     v2data = v2.get_dataclass()
     # breakpoint()
 
+def test_dataclass():
+    v3 = Vivarium(document='out/demo1.json', processes=DEMO_PROCESSES)
+
+    breakpoint()
+
 
 if __name__ == '__main__':
     # test_vivarium()
     # test_interface()
-    test_units()
+    # test_units()
+    test_dataclass()
