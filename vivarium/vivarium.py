@@ -442,7 +442,7 @@ class Vivarium:
         if types is None:
             pass
         elif isinstance(types, dict):
-            self.core.register_types(types)
+            self.core._register_types(types)
         else:
             print("Warning: register_types() should be called with a dictionary of types.")
 
