@@ -259,12 +259,29 @@ class Vivarium:
         self.composite.merge(schema, state, path)
         self.composite.build_step_network()
 
+    def merge(self,
+                  path,
+                  value=None,
+                  schema=None
+                  ):
+        value = value or {}
+        schema = schema or {}
+        path = parse_path(path)
+        self.composite.merge(schema, value, path)
+
     def merge_value(self,
                   path,
                   value
                   ):
         path = parse_path(path)
         self.composite.merge({}, value, path)
+
+    def merge_schema(self,
+                  path,
+                  schema
+                  ):
+        path = parse_path(path)
+        self.composite.merge(schema, {}, path)
 
     def apply_value(self,
                     path,
