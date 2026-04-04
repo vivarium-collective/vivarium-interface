@@ -28,22 +28,30 @@ from vivarium.plotting import (
 
 
 class _SizedGraph:
-    """Wraps a ResponsiveGraph with a max-width container for Jupyter display."""
+    """Wraps a ResponsiveGraph with constrained sizing for Jupyter display."""
 
-    def __init__(self, graph, max_width='600px', max_height='600px'):
+    def __init__(self, graph, max_width=600):
         self._graph = graph
         self._max_width = max_width
-        self._max_height = max_height
 
     def __getattr__(self, name):
         return getattr(self._graph, name)
 
     def _repr_html_(self):
-        svg = self._graph._repr_html_()
-        return (
-            f'<div style="max-width:{self._max_width}; max-height:{self._max_height}; '
-            f'overflow:auto;">{svg}</div>'
+        import re
+        svg = self._graph._graph.pipe(format='svg').decode()
+        # strip XML/DOCTYPE
+        svg = re.sub(r'<\?xml[^?]*\?>\s*', '', svg)
+        svg = re.sub(r'<!DOCTYPE[^>]*>\s*', '', svg)
+        # remove any transform scale so the viewBox controls sizing
+        svg = re.sub(r'scale\([0-9.]+ [0-9.]+\) ', '', svg)
+        # set width to max_width, let height scale from viewBox
+        svg = re.sub(
+            r'<svg width="[^"]*" height="[^"]*"',
+            f'<svg style="max-width:{self._max_width}px; height:auto;"',
+            svg, count=1,
         )
+        return svg
 
     def __repr__(self):
         return repr(self._graph)
@@ -185,6 +193,14 @@ class Vivarium:
         self._add_edge('step', name, step_id, config, inputs, outputs, path)
 
     def _add_edge(self, edge_type, name, edge_id, config, inputs, outputs, path):
+        # Validate that the process/step is registered
+        available = list(self.core.link_registry.keys())
+        if edge_id not in available:
+            raise ValueError(
+                f"'{edge_id}' is not a registered {edge_type}. "
+                f"Available: {available}"
+            )
+
         config = config or {}
         inputs = parse_path(inputs or {})
         outputs = parse_path(outputs or {})
@@ -235,11 +251,18 @@ class Vivarium:
     def remove(self, path):
         """Remove a node at the given path from the state."""
         path = parse_path(path)
+        if not path or path == ['']:
+            raise ValueError("Cannot remove the root state. Provide a path to remove.")
         # walk to the parent and delete the key
         parent = self.composite.state
         for step in path[:-1]:
+            if not isinstance(parent, dict) or step not in parent:
+                raise KeyError(f"Path not found: {render_path(path)}")
             parent = parent[step]
-        del parent[path[-1]]
+        key = path[-1]
+        if not isinstance(parent, dict) or key not in parent:
+            raise KeyError(f"Path not found: {render_path(path)}")
+        del parent[key]
         self._refresh()
 
     def _refresh(self):
@@ -333,6 +356,8 @@ class Vivarium:
 
     def run(self, interval):
         """Run the simulation for the given time interval."""
+        if not isinstance(interval, (int, float)) or interval <= 0:
+            raise ValueError(f"interval must be a positive number, got {interval!r}")
         if self._emitter_mode != 'none':
             self._rebuild_emitter()
         self.composite.run(interval)
@@ -415,8 +440,6 @@ class Vivarium:
 
         kwargs['remove_nodes'] = remove_nodes
 
-        kwargs.setdefault('dpi', '150')
-
         graph = plot_bigraph(
             state=self.composite.state,
             schema=self.composite.schema,
@@ -478,8 +501,8 @@ class Vivarium:
         """Display the bigraph diagram inline when the object is the last expression in a cell."""
         try:
             return self.diagram()._repr_html_()
-        except Exception:
-            return f'<pre>{self.__repr__()}</pre>'
+        except Exception as e:
+            return f'<pre>{self.__repr__()}\n\n[diagram error: {e}]</pre>'
 
     def __repr__(self):
         state_keys = list(self.composite.state.keys()) if self.composite.state else []

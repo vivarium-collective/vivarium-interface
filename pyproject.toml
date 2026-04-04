@@ -31,5 +31,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["vivarium*"]
 
+[project.optional-dependencies]
+dev = ["pytest", "nbmake"]
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "notebooks"]
+addopts = "--nbmake --ignore=notebooks/02_spatio_flux.ipynb --ignore=notebooks/03_genecoli.ipynb"

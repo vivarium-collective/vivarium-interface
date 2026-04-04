@@ -7,7 +7,12 @@ dist/
 .empty
 build/
 .venv/
+venv/
 
 process_bigraph.egg-info/
 out/
 *.egg-info/
+
+# Graphviz artifacts
+*.gv
+*.gv.pdf
