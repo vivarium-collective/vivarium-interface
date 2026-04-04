@@ -18,7 +18,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.x
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
@@ -30,5 +30,4 @@ jobs:
 
     - name: Run pytest
       run: |
-        pip install pytest
-        pytest --cov=vivarium --cov-report=term
+        pytest tests/ --cov=vivarium --cov-report=term

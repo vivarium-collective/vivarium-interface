@@ -1,22 +1,35 @@
 [project]
 name = "vivarium-interface"
-version = "0.0.5"
-description = "Add your description here"
+version = "1.0.0"
+description = "A Pythonic interface for building and running multiscale simulations with process bigraphs"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    {name = "Eran Agmon", email = "agmon.eran@gmail.com"},
+    {name = "Ryan Spangler", email = "ryan.spangler@gmail.com"},
+]
 dependencies = [
-    "process-bigraph",
+    "process-bigraph>=0.0.42",
+    "bigraph-schema>=1.0.15",
     "bigraph-viz",
     "pandas",
     "IPython",
     "matplotlib",
+    "imageio",
     "graphviz",
-    "imageio"
+    "numpy",
 ]
 
+[project.urls]
+Homepage = "https://github.com/vivarium-collective/vivarium-interface"
+
 [build-system]
-requires = [
-    "setuptools",
-    "wheel"
-]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["vivarium*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
