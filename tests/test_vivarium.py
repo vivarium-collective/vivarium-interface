@@ -460,13 +460,16 @@ class TestResults:
         times = ts['/global_time']
         values = ts['/x']
 
-        # With rate=1.0 and interval=1: update = amount * 1.0 * 1.0 = amount
-        # So x doubles each step: 2.0, 4.0, 8.0
-        # (emitter captures state after each update, not the initial state)
-        assert len(values) >= 3
-        assert values[0] == pytest.approx(2.0)
-        assert values[1] == pytest.approx(4.0)
-        assert values[2] == pytest.approx(8.0)
+        # The emitter captures the initial state at t=0 *before* any update,
+        # then once after each of the 3 steps -> 4 snapshots at times 0,1,2,3.
+        # With rate=1.0 and interval=1: update = amount * 1.0 * 1.0 = amount,
+        # so x doubles each step. Starting from x=1.0: 1, 2, 4, 8.
+        assert times[:4] == pytest.approx([0.0, 1.0, 2.0, 3.0])
+        assert len(values) >= 4
+        assert values[0] == pytest.approx(1.0)  # initial state at t=0
+        assert values[1] == pytest.approx(2.0)
+        assert values[2] == pytest.approx(4.0)
+        assert values[3] == pytest.approx(8.0)
 
 
 # ---------------------------------------------------------------------------
